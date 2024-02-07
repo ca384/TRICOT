@@ -1,0 +1,1812 @@
+---
+title: "Tricot for 2022 data"
+output: html_document
+date: "2023-02-23"
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+packages_used <- c("workflowr","tidyverse", "ggplot2", "here","climatrends" ,"tidyverse", "PlackettLuce","gosset", "patchwork","qvcalc","ggparty","igraph", "ClimMobTools", "multcompView","ggplot2", "gtools","remotes","here", "ggpubr","corrplot", "devtools")
+
+#install.packages(c("agricolae"))
+ip <- installed.packages()
+all_packages_installed <- TRUE
+for (package in packages_used){
+  if (!(package %in% ip[,"Package"])){
+    print(paste("Please install package", package))
+    all_packages_installed <- FALSE
+  } else {
+    library(package, character.only = T) # load required package
+  } # end else statement
+}#END packages_used
+if (!all_packages_installed) stop("Need to install packages")
+
+```
+
+
+```{r inport 2022 farmers ranking and removing white spaceon the genotype names}
+#Rank_22 <- read.csv(here::here("data","All_2021_2022Tricot _ranking_data.csv"), head=T)
+Rank_22 <- read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/Tricot_22/ALL_TRICOT_Anchoring.csv")
+
+#remove colunms with remarks from the Rank data frame
+library(stringr)
+idc = which(str_detect(colnames(Rank_22), "REMARK")) # identify colnames containing remarks
+Rank22 = Rank_22[,colnames(Rank_22)[-idc]] # idc contains the colnames, subtract idc
+colnames(Rank22)
+Rank22 = as.data.frame(Rank22)
+
+library(gosset)
+library(PlackettLuce)
+
+
+Rank22$VARIETY.A = gsub(pattern = " ", replacement = "", x = Rank_22$VARIETY.A) # remove spaces from genotype names
+Rank22$VARIETY.B = gsub(pattern = " ", replacement = "", x = Rank_22$VARIETY.B) # 
+Rank22$VARIETY.C = gsub(pattern = " ", replacement = "", x = Rank_22$VARIETY.C) # 
+
+unique(Rank22$VARIETY.A)
+
+
+```
+
+
+```{r for overall for 1MAP}
+Trait_1MAP= c("Best_Ovi1","Worst_Ovi1","Best_Germ1","Worst_Germ1","Best_Pgwt1","Worst_Pgwt1","Best_SuitSE1", "Worst_SuitSE1")
+
+for(i in colnames(Rank22)){
+  Rank22[,i] = as.factor(Rank22[,i])
+}
+summary(Rank22)
+#Rank22 == "C " 
+Rank22a = Rank22
+#Rank22a == "C "
+Rank22a[Rank22a == "C "] = "C"
+Rank22a[Rank22a == "A "] = "A"
+Rank22a[Rank22a == "B "] = "B"
+Rank22a[Rank22a == "S"] = "A"
+Rank22a[Rank22a == "a"] = "A"
+Rank22a[Rank22a == "b"] = "B"
+Rank22a[Rank22a == "c"] = "C"
+Rank22a[Rank22a == ""] = ""
+Rank22a[Rank22a == " C"] = ""
+summary(Rank22a)
+Rank22a = droplevels(Rank22a)
+
+idc = which(str_detect(colnames(Rank22), "Ovi")) # identify colnames containing remarks
+
+colnames(Rank22)[idc]
+# trait combination to give 10 total traits used in. the worth bar
+```
+
+```{r }
+
+trait_list = list(c("Best_Ovi1", "Worst_Ovi1"),
+c("Best_Ovi3",  "Worst_Ovi3"),
+c("Best_Ovi6", "Worst_Ovi6"),
+c("Best_overimpr9MAP","Worst_overimpr9MAP"),
+c("Best_HvOvi12", "Worst_HvOvi12"), 
+c("Best_GapOvi12","Worst_GapOvi12"),       
+c("Best_GaqOvi12" , "Worst_GaqOvi12"),     
+c("Best_EbaOvi12", "Worst_EbaOvi12"),  
+c("Best_EbaAFOvi12", "Worst_EbaAFOvi12"),       
+c("Best_replant12" , "Worst_replant12"))  
+ 
+trait_list2 = list(c("Best_Ovi1", "Worst_Ovi1"),
+c("Best_Germ1","Worst_Germ1"),
+c("Best_Pgwt1","Worst_Pgwt1"),
+c("Best_SuitSE1","Worst_SuitSE1"),
+c("Best_Ovi3",  "Worst_Ovi3"),
+c("Best_Sprout3","Worst_Sprout3"),
+c("Best_Pgwt3","Worst_Pgwt3"),
+c("Best_Canopy3","Worst_Canopy3"),
+c("Best_Branch3","Worst_Branch3"),
+c("Best_Disease3","Worst_Disease3"),
+c("Best_Earlybulk3","Worst_Earlybulk3"),
+c("Best_Ovi6", "Worst_Ovi6"),
+c("Best_Sprout6","Worst_Sprout6"),        
+c("Best_Pgwt6","Worst_Pgwt6"),          
+c("Best_Canopy6","Worst_Canopy6"),       
+c("Best_Branch6","Worst_Branch6"), 
+c("Best_Disease6","Worst_Disease6"),       
+c("Best_Earlybulk6","Worst_Earlybulk6"),     
+c("Best_overimpr9MAP","Worst_overimpr9MAP"),
+c("Best_pltgrwt9MAP","Worst_pltgrwt9MAP"),    
+c("Best_weed9MAP","Worst_weed9MAP"),      
+c("Best_branch9MAP","Worst_branch9MAP"),     
+c("Best_suitability9MAP","Worst_suitability9MAP"),
+c("Best_HvOvi12", "Worst_HvOvi12"), 
+c("Best_HvYield12", "Worst_HvYield12"),     
+c("Best_HvDensity12" , "Worst_HvDensity12"),    
+c("Best_HvRootcol12" ,"Worst_HvRootcol12"),    
+c("Best_HvRootsiz12" , "Worst_HvRootsiz12"),    
+c("Best_HvRootshp12" , "Worst_HvRootshp12"),   
+c("Best_HvRootrot12" , "Worst_HvRootrot12"),    
+c("Best_HvWodyfil12" , "Worst_HvWodyfil12"),   
+c("Best_EaseP12" , "Worst_EaseP12"),
+c("Best_GarEaseP12" , "Worst_GarEaseP12"),     
+c("Best_Garmash12" , "Worst_Garmash12"),      
+c("Best_Waterelz12","Worst_Waterelz12"),     
+c("Best_SwellMash12", "Worst_SwellMash12"),
+c("Best_Gayield12" , "Worst_Gayield12"),      
+c("Best_GapOvi12","Worst_GapOvi12"),       
+c("Best_GaqDry12" , "Worst_GaqDry12"),       
+c("Best_GaColour12","Worst_GaqColour12"),    
+c("Best_GaqHeavy12" ,"Worst_GaqHeavy12"),     
+c( "Best_Gaqsmooth12" , "Worth_Gaqsmooth12"),    
+c("Best_GaqTaste12" , "Worst_GaqTaste12"),   
+c("Best_Gaqwoodyfil12","Worst_Gaqwoodyfil12"), 
+c("Best_GaqOvi12" , "Worst_GaqOvi12"),     
+c( "Best_EbaMould12" , "Worst_EbaMould12"),    
+c("Best_EbaSoft12" , "Worst_EbaSoft12"),      
+c("Best_EbaDraw12" , "Worst_EbaDraw12"),      
+c("Best_EbaSmooth12" ,"Worst_EbaSmooth12"),    
+c("Best_Ebacolour12" , "Worst_Ebacolour12"),   
+c("Best_EbaNstick12" , "Worst_EbaNstick12"),    
+c("Best_Ebaswell12" , "Worst_Ebaswell12"),     
+c("Best_EbaTaste12" , "Worst_EbaTaste12"),     
+c("Best_EbaOvi12", "Worst_EbaOvi12"),       
+c("Best_EbaAFMould12","Worst_EbaAFMould12"),   
+c("Best_EbaAFSoftness12","Worst_EbaAFSoftness12"),
+c("Best_EbaAFDraw12","Worst_EbaAFDraw12"),   
+c("Best_EbaAFSmooth12" , "Worst_EbaAFSmooth12"),  
+c("Best_EbaAFNodour12", "Worst_EbaAFNodour12"), 
+c("Best_EbaAFTaste12", "Worst_EbaAFTaste12"),   
+c("Best_EbaAFcolour12" , "Worst_EbaAFcolour12"),  
+c("Best_EbaAFOvi12", "Worst_EbaAFOvi12"),     
+c("Best_FEOvi12" , "Worst_FEOvi12"),        
+c("Best_replant12" , "Worst_replant12"))  
+``` 
+
+
+```{r }
+Rank22a =  Rank22a[-17,] # all colmns of the row are empty 
+tricot_rank_ouptput = list() #
+for(trt in 1:length(trait_list)){
+  trt1 = trait_list[[trt]] # subsetting of the trait list
+
+  # use rank tricot to rank the variets (base on the genotype names)
+R_1map <- rank_tricot(data = Rank22a,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = trt1)
+tricot_rank_ouptput[[trt]] <- R_1map
+}
+
+
+tricot_rank_model = list()# 
+for(trt in 1:length(tricot_rank_ouptput)){
+  trt1 = tricot_rank_ouptput[[trt]]
+
+mod_R_1p <- PlackettLuce(trt1, npseudo = 0.5) 
+                     
+tricot_rank_model[[trt]] <- mod_R_1p
+}
+
+# name for each model
+labels = c("1MAP", "3MAP", "6MAP", "9MAP", "Harvest", "Processing","Garri_quality","Fresh_eba_quality","Ov_Eba_quality", "Replant")
+
+worth_map(tricot_rank_model, labels,size=4) + theme(axis.text.x = element_text(angle = 90))
+
+plots = list()
+for(i in length(tricot_rank_model)){
+
+ p_i = worth_bar(tricot_rank_model[[i]])
+ plots[[i]] = p_i
+}
+
+ p1 = worth_bar(tricot_rank_model[[1]]) +  theme(axis.text.y = element_text(size = 6))
+ p2 = worth_bar(tricot_rank_model[[2]]) +  theme(axis.text.y = element_text(size = 6))
+p3 = worth_bar(tricot_rank_model[[3]]) +  theme(axis.text.y = element_text(size = 6))
+p4 = worth_bar(tricot_rank_model[[4]]) +  theme(axis.text.y = element_text(size = 6))
+p5 = worth_bar(tricot_rank_model[[5]]) +  theme(axis.text.y = element_text(size = 6))
+p6 = worth_bar(tricot_rank_model[[6]]) +  theme(axis.text.y = element_text(size = 6))
+p7 = worth_bar(tricot_rank_model[[7]]) +  theme(axis.text.y = element_text(size = 6))
+p8 = worth_bar(tricot_rank_model[[8]]) +  theme(axis.text.y = element_text(size = 6))
+p9 = worth_bar(tricot_rank_model[[9]]) +  theme(axis.text.y = element_text(size = 6))
+p10 = worth_bar(tricot_rank_model[[10]]) +  theme(axis.text.y = element_text(size = 6))
+
+#Redoing model 5 because it has ties
+ #tricot_rank_model_5a = tricot_rank_model[[5]]
+ #tricot_rank_model_5a[[2]] = tricot_rank_model_5a[[2]][-28]
+ # worth_bar(tricot_rank_model_5a)
+  
+  library(ggpubr)
+  ggarrange(p1 ,p2,p3,p4,p5,p6, font.label = list(size = 10,face = "plain"), labels = c("A","B","C","D","E","F") ,ncol = 3, nrow = 2)
+
+ ggarrange(p7,p8,p9,p10, font.label = list(size = 10,face = "plain"), labels = c("A","B","C","D") ,ncol = 2, nrow = 2) 
+  #summary(Mod_1MAP_qv)
+  
+#datplt = as.data.frame(summary(mod_R_1p$rankings))
+
+
+# Mod_1MAP_qv <- qvcalc(mod_R_1p )
+# Mod_1MAP_qv$qvframe <- Mod_1MAP_qv$qvframe[order(Mod_1MAP_qv$qvframe$estimate),]
+#Mod_1MAP_qv$qvframe <- Mod_1MAP_qv$qvframe
+#plot(x=Mod_1MAP_qv$qvframe)
+# plot(Mod_1MAP_qv, las = 2, ylab = "Worth estimates", cex.axis=0.5, main = NULL)
+# #axis(1, at = seq_len(30), labels = rownames(Mod_1MAP_qv$qvframe), las = 2, cex.axis = 0.6)
+
+#R_1p <- as.rankings(R_1map)
+
+```
+
+
+```{r, worth map for 1MAP time points}
+
+trait_list2 = list(c("Best_Ovi1", "Worst_Ovi1"),
+c("Best_Germ1","Worst_Germ1"),
+c("Best_Pgwt1","Worst_Pgwt1"),
+c("Best_SuitSE1","Worst_SuitSE1"))
+
+tricot_rank_ouptput = list() #
+for(trt in 1:length(trait_list2)){
+  trt1 = trait_list[[trt]] # subsetting of the trait list
+
+  # use rank tricot to rank the variets (base on the genotype names)
+R_tri <- rank_tricot(data = Rank22a,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = trt1)
+tricot_rank_ouptput[[trt]] <- R_tri
+}
+
+
+tricot_rank_model = list()# 
+for(trt in 1:length(tricot_rank_ouptput)){
+  trt1 = tricot_rank_ouptput[[trt]]
+
+mod_R_1p <- PlackettLuce(trt1, npseudo = 0.5) 
+                     
+tricot_rank_model[[trt]] <- mod_R_1p
+}
+
+
+# name for each model
+labels = c("Overall", "Germination","Pgwt","SuitSE")
+
+worth_map(tricot_rank_model, labels,size=4) + theme(axis.text.x = element_text(angle = 90))
+
+
+```
+
+```{r, worth map at 3MAP}
+trait_list3 = list(c("Best_Ovi3",  "Worst_Ovi3"),
+c("Best_Sprout3","Worst_Sprout3"),
+c("Best_Pgwt3","Worst_Pgwt3"),
+c("Best_Canopy3","Worst_Canopy3"),
+c("Best_Branch3","Worst_Branch3"),
+c("Best_Disease3","Worst_Disease3"),
+c("Best_Earlybulk3","Worst_Earlybulk3"))
+
+tricot_rank_ouptput = list() #
+for(trt in 1:length(trait_list3)){
+  trt1 = trait_list[[trt]] # subsetting of the trait list
+
+  # use rank tricot to rank the variets (base on the genotype names)
+R_tri <- rank_tricot(data = Rank22a,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = trt1)
+tricot_rank_ouptput[[trt]] <- R_tri
+}
+
+
+tricot_rank_model = list()# 
+for(trt in 1:length(tricot_rank_ouptput)){
+  trt1 = tricot_rank_ouptput[[trt]]
+
+mod_R_1p <- PlackettLuce(trt1, npseudo = 0.5) 
+                     
+tricot_rank_model[[trt]] <- mod_R_1p
+}
+
+
+# name for each model
+labels =  c("Overall","Germination", "Pgwt", "Canopy", "Branching", "Disease", "Early_bulking")
+
+
+worth_map(tricot_rank_model, labels,size=4) + theme(axis.text.x = element_text(angle = 90))
+
+
+```
+
+
+```{r, worth map at 6MAP}
+trait_list4 = list(c("Best_Ovi6", "Worst_Ovi6"),
+c("Best_Sprout6","Worst_Sprout6"),        
+c("Best_Pgwt6","Worst_Pgwt6"),          
+c("Best_Canopy6","Worst_Canopy6"),       
+c("Best_Branch6","Worst_Branch6"), 
+c("Best_Disease6","Worst_Disease6"),       
+c("Best_Earlybulk6","Worst_Earlybulk6"))
+
+tricot_rank_ouptput = list() #
+for(trt in 1:length(trait_list4)){
+  trt1 = trait_list[[trt]] # subsetting of the trait list
+
+  # use rank tricot to rank the variets (base on the genotype names)
+R_tri <- rank_tricot(data = Rank22a,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = trt1)
+tricot_rank_ouptput[[trt]] <- R_tri
+}
+
+
+tricot_rank_model = list()# 
+for(trt in 1:length(tricot_rank_ouptput)){
+  trt1 = tricot_rank_ouptput[[trt]]
+
+mod_R_1p <- PlackettLuce(trt1, npseudo = 0.5) 
+                     
+tricot_rank_model[[trt]] <- mod_R_1p
+}
+
+
+# name for each model
+labels =  c("Overall_impression","Germination", "Pgwt", "Canopy", "Branching", "Disease", "Early_bulking")
+
+
+worth_map(tricot_rank_model, labels,size=4) + theme(axis.text.x = element_text(angle = 90))
+
+```
+```{r, worth map at 9 MAP}
+
+trait_list5 = list(c("Best_overimpr9MAP","Worst_overimpr9MAP"),
+c("Best_pltgrwt9MAP","Worst_pltgrwt9MAP"),   
+c("Best_weed9MAP","Worst_weed9MAP"),      
+c("Best_branch9MAP","Worst_branch9MAP"),     
+c("Best_suitability9MAP","Worst_suitability9MAP"))
+
+tricot_rank_ouptput = list() #
+for(trt in 1:length(trait_list5)){
+  trt1 = trait_list[[trt]] # subsetting of the trait list
+
+  # use rank tricot to rank the variets (base on the genotype names)
+R_tri <- rank_tricot(data = Rank22a,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = trt1)
+tricot_rank_ouptput[[trt]] <- R_tri
+}
+
+
+tricot_rank_model = list()# 
+for(trt in 1:length(tricot_rank_ouptput)){
+  trt1 = tricot_rank_ouptput[[trt]]
+
+mod_R_1p <- PlackettLuce(trt1, npseudo = 0.5) 
+                     
+tricot_rank_model[[trt]] <- mod_R_1p
+}
+
+# name for each model
+labels =  c("Overall_impression", "Pgwt", "Canopy", "Branching", "Suitability")
+
+
+worth_map(tricot_rank_model, labels,size=4) + theme(axis.text.x = element_text(angle = 90))
+
+
+```
+```{r, worth map at harvest}
+trait_list6 = list(c("Best_HvOvi12", "Worst_HvOvi12"), 
+c("Best_HvYield12", "Worst_HvYield12"),     
+c("Best_HvDensity12" , "Worst_HvDensity12"),  c("Best_HvRootcol12" ,"Worst_HvRootcol12"),   c("Best_HvRootsiz12" ,"Worst_HvRootsiz12"), c("Best_HvRootshp12" , "Worst_HvRootshp12"))
+
+tricot_rank_ouptput = list() #
+for(trt in 1:length(trait_list6)){
+  trt1 = trait_list[[trt]] # subsetting of the trait list
+
+  # use rank tricot to rank the variets (base on the genotype names)
+R_tri <- rank_tricot(data = Rank22a,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = trt1)
+tricot_rank_ouptput[[trt]] <- R_tri
+}
+
+
+tricot_rank_model_H = list()# 
+for(trt in 1:length(tricot_rank_ouptput)){
+  trt1 = tricot_rank_ouptput[[trt]]
+
+mod_R_1p <- PlackettLuce(trt1, npseudo = 0.5) 
+                     
+tricot_rank_model_H[[trt]] <- mod_R_1p
+}
+length(tricot_rank_model_H)
+
+# name for each model
+labels =  c("Overall_impression", "Yield", "Density", "Root_color", "Root_size", "Root_shape")
+
+
+worth_map(tricot_rank_model, labels,size=4) + theme(axis.text.x = element_text(angle = 90))
+
+
+```
+```{r, worth map for garriquality}
+trait_list7 = list(c("Best_GapOvi12","Worst_GapOvi12"),
+  c("Best_HvWodyfil12" , "Worst_HvWodyfil12"),
+  c("Best_EaseP12" , "Worst_EaseP12"),
+c("Best_GarEaseP12" , "Worst_GarEaseP12"),     
+c("Best_Garmash12" , "Worst_Garmash12"),      
+c("Best_Waterelz12","Worst_Waterelz12"),     
+c("Best_SwellMash12", "Worst_SwellMash12"),
+c("Best_Gayield12" , "Worst_Gayield12")      )
+
+tricot_rank_ouptput = list() #
+for(trt in 1:length(trait_list7)){
+  trt1 = trait_list[[trt]] # subsetting of the trait list
+
+  # use rank tricot to rank the variets (base on the genotype names)
+R_tri <- rank_tricot(data = Rank22a,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = trt1)
+tricot_rank_ouptput[[trt]] <- R_tri
+}
+
+
+tricot_rank_model = list()# 
+for(trt in 1:length(tricot_rank_ouptput)){
+  trt1 = tricot_rank_ouptput[[trt]]
+
+mod_R_1p <- PlackettLuce(trt1, npseudo = 0.5) 
+tricot_rank_model[[trt]] <- mod_R_1p
+}
+
+# name for each model
+labels =  c("Overall_impression","Woodiness", "ease_peeling", "Ease_processing", "Mash_quality", "Water_content", "Mash_swell", "garri_yield")
+
+
+worth_map(tricot_rank_model, labels,size=4) + theme(axis.text.x = element_text(angle = 90))
+
+
+```
+```{r worth map of the garri quality traits}
+trait_list8 = list(c("Best_GaqOvi12" , "Worst_GaqOvi12"), 
+c("Best_GaqDry12" , "Worst_GaqDry12"),       
+c("Best_GaColour12","Worst_GaqColour12"),    
+c("Best_GaqHeavy12" ,"Worst_GaqHeavy12"),   
+c( "Best_Gaqsmooth12" , "Worth_Gaqsmooth12"),   c("Best_GaqTaste12" , "Worst_GaqTaste12"),   c("Best_Gaqwoodyfil12","Worst_Gaqwoodyfil12"))
+
+tricot_rank_ouptput = list() #
+for(trt in 1:length(trait_list8)){
+  trt1 = trait_list[[trt]] # subsetting of the trait list
+
+  # use rank tricot to rank the variets (base on the genotype names)
+R_tri <- rank_tricot(data = Rank22a,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = trt1)
+tricot_rank_ouptput[[trt]] <- R_tri
+}
+
+
+tricot_rank_model = list()# 
+for(trt in 1:length(tricot_rank_ouptput)){
+  trt1 = tricot_rank_ouptput[[trt]]
+
+mod_R_1p <- PlackettLuce(trt1, npseudo = 0.5) 
+                     
+tricot_rank_model[[trt]] <- mod_R_1p
+}
+
+
+# name for each model
+labels =  c("Overall_impression", "Dryness", "Color", "heaviness", "Smoothness", "Taste", "wood particles")
+
+
+worth_map(tricot_rank_model, labels,size=4) + theme(axis.text.x = element_text(angle = 90))
+
+
+
+```
+```{r, Worth map of fresh eba qualit}
+
+trait_list9 = list(c("Best_EbaOvi12", "Worst_EbaOvi12"),
+  c( "Best_EbaMould12" , "Worst_EbaMould12"),   c("Best_EbaSoft12" , "Worst_EbaSoft12"),    c("Best_EbaDraw12" , "Worst_EbaDraw12"),    c("Best_EbaSmooth12" ,"Worst_EbaSmooth12"),   c("Best_Ebacolour12" , "Worst_Ebacolour12"),  c("Best_EbaNstick12" , "Worst_EbaNstick12"),  c("Best_Ebaswell12" , "Worst_Ebaswell12"),  c("Best_EbaTaste12" , "Worst_EbaTaste12"))
+
+tricot_rank_ouptput = list() #
+for(trt in 1:length(trait_list9)){
+  trt1 = trait_list[[trt]] # subsetting of the trait list
+
+  # use rank tricot to rank the variets (base on the genotype names)
+R_tri <- rank_tricot(data = Rank22a,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = trt1)
+tricot_rank_ouptput[[trt]] <- R_tri
+}
+
+
+tricot_rank_model = list()# 
+for(trt in 1:length(tricot_rank_ouptput)){
+  trt1 = tricot_rank_ouptput[[trt]]
+
+mod_R_1p <- PlackettLuce(trt1, npseudo = 0.5) 
+                     
+tricot_rank_model[[trt]] <- mod_R_1p
+}
+
+
+# name for each model
+labels =  c("Overall_impression", "Mouldability", "softness", "Strechability", "Smoothness", "color", "stickiness", "swelling", "Taste")
+
+
+worth_map(tricot_rank_model, labels,size=4) + theme(axis.text.x = element_text(angle = 90))
+
+```
+```{r, worth map for overnight eba quality}
+trait_list10 = list(
+  c("Best_EbaAFOvi12", "Worst_EbaAFOvi12"),
+  c("Best_EbaAFMould12","Worst_EbaAFMould12"),
+c("Best_EbaAFSoftness12","Worst_EbaAFSoftness12"),
+c("Best_EbaAFDraw12","Worst_EbaAFDraw12"),   
+c("Best_EbaAFSmooth12" , "Worst_EbaAFSmooth12"),  
+c("Best_EbaAFNodour12", "Worst_EbaAFNodour12"), 
+c("Best_EbaAFTaste12", "Worst_EbaAFTaste12"), c("Best_EbaAFcolour12" , "Worst_EbaAFcolour12"))  
+
+
+tricot_rank_ouptput = list() #
+for(trt in 1:length(trait_list10)){
+  trt1 = trait_list[[trt]] # subsetting of the trait list
+
+  # use rank tricot to rank the variets (base on the genotype names)
+R_tri <- rank_tricot(data = Rank22a,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = trt1)
+tricot_rank_ouptput[[trt]] <- R_tri
+}
+
+
+tricot_rank_model = list()# 
+for(trt in 1:length(tricot_rank_ouptput)){
+  trt1 = tricot_rank_ouptput[[trt]]
+
+mod_R_1p <- PlackettLuce(trt1, npseudo = 0.5) 
+                     
+tricot_rank_model[[trt]] <- mod_R_1p
+}
+
+
+# name for each model
+labels =  c("Overall_impression", "Mouldability", "Softness", "Strechability", "Smoothness", "Odor", "Taste","Color"  )
+
+
+worth_map(tricot_rank_model, labels,size=4) + theme(axis.text.x = element_text(angle = 90))
+
+```
+
+
+```{r}
+trait_list2 = list(c("Best_Ovi1", "Worst_Ovi1"),
+c("Best_Germ1","Worst_Germ1"),
+c("Best_Pgwt1","Worst_Pgwt1"),
+c("Best_SuitSE1","Worst_SuitSE1"),
+c("Best_Ovi3",  "Worst_Ovi3"),
+c("Best_Sprout3","Worst_Sprout3"),
+c("Best_Pgwt3","Worst_Pgwt3"),
+c("Best_Canopy3","Worst_Canopy3"),
+c("Best_Branch3","Worst_Branch3"),
+c("Best_Disease3","Worst_Disease3"),
+c("Best_Earlybulk3","Worst_Earlybulk3"),
+c("Best_Ovi6", "Worst_Ovi6"),
+c("Best_Sprout6","Worst_Sprout6"),        
+c("Best_Pgwt6","Worst_Pgwt6"),          
+c("Best_Canopy6","Worst_Canopy6"),       
+c("Best_Branch6","Worst_Branch6"), 
+c("Best_Disease6","Worst_Disease6"),       
+c("Best_Earlybulk6","Worst_Earlybulk6"),     
+c("Best_overimpr9MAP","Worst_overimpr9MAP"),
+c("Best_pltgrwt9MAP","Worst_pltgrwt9MAP"),    
+c("Best_weed9MAP","Worst_weed9MAP"),      
+c("Best_branch9MAP","Worst_branch9MAP"),     
+c("Best_suitability9MAP","Worst_suitability9MAP"),
+c("Best_HvOvi12", "Worst_HvOvi12"), 
+c("Best_HvYield12", "Worst_HvYield12"),     
+c("Best_HvDensity12" , "Worst_HvDensity12"),    
+c("Best_HvRootcol12" ,"Worst_HvRootcol12"),    
+c("Best_HvRootsiz12" , "Worst_HvRootsiz12"),    
+c("Best_HvRootshp12" , "Worst_HvRootshp12"),   
+c("Best_HvRootrot12" , "Worst_HvRootrot12"),    
+c("Best_HvWodyfil12" , "Worst_HvWodyfil12"),   
+c("Best_EaseP12" , "Worst_EaseP12"),
+c("Best_GarEaseP12" , "Worst_GarEaseP12"),     
+c("Best_Garmash12" , "Worst_Garmash12"),      
+c("Best_Waterelz12","Worst_Waterelz12"),     
+c("Best_SwellMash12", "Worst_SwellMash12"),
+c("Best_Gayield12" , "Worst_Gayield12"),      
+c("Best_GapOvi12","Worst_GapOvi12"),       
+c("Best_GaqDry12" , "Worst_GaqDry12"),       
+c("Best_GaColour12","Worst_GaqColour12"),    
+c("Best_GaqHeavy12" ,"Worst_GaqHeavy12"),     
+c( "Best_Gaqsmooth12" , "Worth_Gaqsmooth12"),    
+c("Best_GaqTaste12" , "Worst_GaqTaste12"),   
+c("Best_Gaqwoodyfil12","Worst_Gaqwoodyfil12"), 
+c("Best_GaqOvi12" , "Worst_GaqOvi12"),     
+c( "Best_EbaMould12" , "Worst_EbaMould12"),    
+c("Best_EbaSoft12" , "Worst_EbaSoft12"),      
+c("Best_EbaDraw12" , "Worst_EbaDraw12"),      
+c("Best_EbaSmooth12" ,"Worst_EbaSmooth12"),    
+c("Best_Ebacolour12" , "Worst_Ebacolour12"),   
+c("Best_EbaNstick12" , "Worst_EbaNstick12"),    
+c("Best_Ebaswell12" , "Worst_Ebaswell12"),     
+c("Best_EbaTaste12" , "Worst_EbaTaste12"),     
+c("Best_EbaOvi12", "Worst_EbaOvi12"),       
+c("Best_EbaAFMould12","Worst_EbaAFMould12"),   
+c("Best_EbaAFSoftness12","Worst_EbaAFSoftness12"),
+c("Best_EbaAFDraw12","Worst_EbaAFDraw12"),   
+c("Best_EbaAFSmooth12" , "Worst_EbaAFSmooth12"),  
+c("Best_EbaAFNodour12", "Worst_EbaAFNodour12"), 
+c("Best_EbaAFTaste12", "Worst_EbaAFTaste12"),   
+c("Best_EbaAFcolour12" , "Worst_EbaAFcolour12"),  
+c("Best_EbaAFOvi12", "Worst_EbaAFOvi12"),     
+c("Best_FEOvi12" , "Worst_FEOvi12"),        
+c("Best_replant12" , "Worst_replant12"))  
+
+```
+
+```{r, rank correlation for yield }
+library(gosset)
+library(PlackettLuce)
+
+# Create ranking object for trait Harvest Yield 12 MAP  
+colnames(Rank22a)
+hvt12_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_HvYield12", "Worst_HvYield12"))
+
+
+density_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_HvDensity12", "Worst_HvDensity12"))
+
+
+Rootcol_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_HvRootcol12", "Worst_HvRootcol12"))
+
+
+Rootsiz_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_HvRootsiz12", "Worst_HvRootsiz12"))
+
+
+Rootshp_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_HvRootshp12", "Worst_HvRootshp12"))
+
+
+# Rootrot_rank<- gosset::rank_tricot(data = Rank22a, 
+#                                     items = c("VARIETY.A",
+#                                               "VARIETY.B",
+#                                               "VARIETY.C"),
+#                                     input = c("Best_HvRootrot12", "Worst_HvRootrot12"))
+
+
+HvOvi_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_HvOvi12", "Worst_HvOvi12"))
+# Get the Kendall rank correlation between the two traits
+
+Traits_cor = c("HvOvi_rank","hvt12_rank", "density_rank", "Rootcol_rank", "Rootsiz_rank", "Rootshp_rank")
+
+rank_out_cor = list(HvOvi_rank = HvOvi_rank, hvt12_rank = hvt12_rank, density_rank = density_rank, Rootcol_rank = Rootcol_rank, Rootsiz_rank = Rootsiz_rank, Rootshp_rank = Rootshp_rank)
+
+Tau_corMat = matrix(nrow = length(Traits_cor), ncol = length(Traits_cor))
+rownames(Tau_corMat) <- Traits_cor
+colnames(Tau_corMat) <- Traits_cor
+
+Tau_corPvalue = matrix(nrow = length(Traits_cor), ncol = length(Traits_cor))
+rownames(Tau_corPvalue) <- Traits_cor
+colnames(Tau_corPvalue) <- Traits_cor
+
+for(i in Traits_cor){
+  for(j in Traits_cor){
+    kt1 <- gosset::kendallTau(rank_out_cor[[i]], rank_out_cor[[j]])
+    Tau_corMat[i,j] = round(kt1[1,1],3)
+    Tau_corPvalue[i,j] = round(kt1[1,4],4)
+  }
+}
+Tau_corMat
+
+Tau_corPvalue
+
+write.csv(x=Tau_corMat, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/rank_cor_yield.csv")
+write.csv(x=Tau_corPvalue, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/pvals_rank_cor_yield.csv")
+
+
+
+
+
+
+# Create a Plackett-Luce model for each trait, using the list of rankings
+
+# plm_list <- lapply(X = Traits_cor, 
+#                    FUN = function(X){
+#                      PlackettLuce::PlackettLuce(X)
+#                    })
+# 
+# plm_list
+# 
+# names(plm_list) <- c("Yield 12 MAP", "Disease 6 MAP")
+
+# Create a heatmap with worth estimates for each trait
+#gosset::worth_map(plm_list, names(plm_list))
+
+
+
+```
+
+```{r,1 map}
+ovmap1_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Ovi1", "Worst_Ovi1"))
+
+# Creat ranking object for trait Disease resistance 6 MAP
+
+gem1_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Germ1", "Worst_Germ1"))
+
+
+gwrt1_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Pgwt1", "Worst_Pgwt1"))
+
+
+SuitSE1_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_SuitSE1", "Worst_SuitSE1"))
+
+
+Traits_cor2 = c("ovmap1_rank", "gem1_rank","gwrt1_rank","SuitSE1_rank")
+
+rank_out_cor2 = list(ovmap1_rank= ovmap1_rank, gem1_rank=gem1_rank,gwrt1_rank= gwrt1_rank,SuitSE1_rank=SuitSE1_rank)
+
+Tau_corMat2 = matrix(nrow = length(Traits_cor2), ncol = length(Traits_cor2))
+rownames(Tau_corMat2) <- Traits_cor2
+colnames(Tau_corMat2) <- Traits_cor2
+
+Tau_corPvalue2 = matrix(nrow = length(Traits_cor2), ncol = length(Traits_cor2))
+rownames(Tau_corPvalue2) <- Traits_cor2
+colnames(Tau_corPvalue2) <- Traits_cor2
+
+for(i in Traits_cor2){
+  for(j in Traits_cor2){
+    kt1 <- gosset::kendallTau(rank_out_cor2[[i]], rank_out_cor2[[j]])
+    Tau_corMat2[i,j] = round(kt1[1,1],3)
+    Tau_corPvalue2[i,j] = round(kt1[1,4],4)
+  }
+}
+Tau_corMat2
+
+Tau_corPvalue2
+write.csv(x=Tau_corMat2, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/rank_cor_1map.csv")
+write.csv(x=Tau_corPvalue2, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/pvals_rank_cor_1map.csv")
+```
+
+```{r, 3map}
+ovmap3_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Ovi3", "Worst_Ovi3"))
+
+# Creat ranking object for trait Disease resistance 6 MAP
+
+gem2_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Sprout3", "Worst_Sprout3"))
+
+
+gwrt3_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Pgwt3", "Worst_Pgwt3"))
+
+
+canopy3_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Canopy3", "Worst_Canopy3"))
+
+branch3_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Branch3", "Worst_Branch3"))
+
+disease3_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Disease3", "Worst_Disease3"))
+
+Earlybulk3_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Earlybulk3", "Worst_Earlybulk3"))
+
+Traits_cor3 = c("ovmap3_rank", "gem2_rank","gwrt3_rank", "canopy3_rank","branch3_rank","disease3_rank","Earlybulk3_rank")
+
+rank_out_cor3 = list(ovmap3_rank= ovmap3_rank, gem2_rank= gem2_rank, gwrt3_rank= gwrt3_rank, canopy3_rank= canopy3_rank ,branch3_rank= branch3_rank,disease3_rank=disease3_rank,Earlybulk3_rank=Earlybulk3_rank)
+
+Tau_corMat3 = matrix(nrow = length(Traits_cor3), ncol = length(Traits_cor3))
+rownames(Tau_corMat3) <- Traits_cor3
+colnames(Tau_corMat3) <- Traits_cor3
+
+Tau_corPvalue3 = matrix(nrow = length(Traits_cor3), ncol = length(Traits_cor3))
+rownames(Tau_corPvalue3) <- Traits_cor3
+colnames(Tau_corPvalue3) <- Traits_cor3
+
+for(i in Traits_cor3){
+  for(j in Traits_cor3){
+    kt1 <- gosset::kendallTau(rank_out_cor3[[i]], rank_out_cor3[[j]])
+    Tau_corMat3[i,j] = round(kt1[1,1],3)
+    Tau_corPvalue3[i,j] = round(kt1[1,4],4)
+  }
+}
+Tau_corMat3
+
+Tau_corPvalue3
+write.csv(x=Tau_corMat3, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/rank_cor_3map.csv")
+write.csv(x=Tau_corPvalue3, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/pvals_rank_cor_3map.csv")
+```
+
+
+```{r, 6map}
+ovmap6_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Ovi6", "Worst_Ovi6"))
+
+# Creat ranking object for trait Disease resistance 6 MAP
+
+gem6_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Sprout6", "Worst_Sprout6"))
+
+gwrt6_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Pgwt6", "Worst_Pgwt6"))
+
+
+canopy6_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Canopy6", "Worst_Canopy6"))
+
+branch6_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Branch6", "Worst_Branch6"))
+
+disease6_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Disease6", "Worst_Disease6"))
+
+Earlybulk6_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Earlybulk6", "Worst_Earlybulk6"))
+
+#disease6_rank=disease6_rank
+#disease6_rank"
+
+Traits_cor4 = c("ovmap6_rank", "gem6_rank", "gwrt6_rank", "canopy6_rank", "branch6_rank", "Earlybulk6_rank")
+
+rank_out_cor4 = list(ovmap6_rank= ovmap6_rank, gem6_rank=gem6_rank, gwrt6_rank=gwrt6_rank, canopy6_rank=canopy6_rank, branch6_rank= branch6_rank, Earlybulk6_rank=Earlybulk6_rank)
+
+Tau_corMat4 = matrix(nrow = length(Traits_cor4), ncol = length(Traits_cor4))
+rownames(Tau_corMat4) <- Traits_cor4
+colnames(Tau_corMat4) <- Traits_cor4
+
+Tau_corPvalue4 = matrix(nrow = length(Traits_cor4), ncol = length(Traits_cor4))
+rownames(Tau_corPvalue4) <- Traits_cor4
+colnames(Tau_corPvalue4) <- Traits_cor4
+
+for(i in Traits_cor4){
+  for(j in Traits_cor4){
+    kt1 <- gosset::kendallTau(rank_out_cor4[[i]], rank_out_cor4[[j]])
+    Tau_corMat4[i,j] = round(kt1[1,1],3)
+    Tau_corPvalue4[i,j] = round(kt1[1,4],4)
+  }
+}
+Tau_corMat4
+
+Tau_corPvalue4
+write.csv(x=Tau_corMat4, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/rank_cor_6map.csv")
+
+write.csv(x=Tau_corPvalue4, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/pvals_rank_cor_6map.csv")
+```
+
+
+```{r,9map}
+ovmap9_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_overimpr9MAP", "Worst_overimpr9MAP"))
+
+# Creat ranking object for trait Disease resistance 6 MAP
+
+gwrt9_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_pltgrwt9MAP", "Worst_pltgrwt9MAP"))
+
+
+weed9_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_weed9MAP", "Worst_weed9MAP"))
+
+branch9_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_branch9MAP", "Worst_branch9MAP"))
+
+
+suit9_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_suitability9MAP", "Worst_suitability9MAP"))
+
+
+Traits_cor5 = c("ovmap9_rank", "gwrt9_rank", "weed9_rank","branch9_rank","suit9_rank")
+
+rank_out_cor5 = list(ovmap9_rank= ovmap9_rank, gwrt9_rank=gwrt9_rank,weed9_rank=weed9_rank,branch9_rank=branch9_rank,suit9_rank= suit9_rank)
+
+Tau_corMat5 = matrix(nrow = length(Traits_cor5), ncol = length(Traits_cor5))
+rownames(Tau_corMat5) <- Traits_cor5
+colnames(Tau_corMat5) <- Traits_cor5
+
+Tau_corPvalue5 = matrix(nrow = length(Traits_cor5), ncol = length(Traits_cor5))
+rownames(Tau_corPvalue5) <- Traits_cor5
+colnames(Tau_corPvalue5) <- Traits_cor5
+
+for(i in Traits_cor5){
+  for(j in Traits_cor5){
+    kt1 <- gosset::kendallTau(rank_out_cor5[[i]], rank_out_cor5[[j]])
+    Tau_corMat5[i,j] = round(kt1[1,1],3)
+    Tau_corPvalue5[i,j] = round(kt1[1,4],4)
+  }
+}
+Tau_corMat5
+
+Tau_corPvalue5
+write.csv(x=Tau_corMat5, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/rank_cor_9map.csv")
+write.csv(x=Tau_corPvalue5, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/pvals_rank_cor_9map.csv")
+```
+
+
+```{r, processing}
+ov_Garri_Proc_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_GapOvi12", "Worst_GapOvi12"))
+
+
+
+woodyfil_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_HvWodyfil12", "Worst_HvWodyfil12"))
+
+
+peeling_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EaseP12", "Worst_EaseP12"))
+
+
+ease_proc_garri_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_GarEaseP12", "Worst_GarEaseP12"))
+
+
+Garri_mash_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Garmash12", "Worst_Garmash12"))
+
+
+water_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Waterelz12", "Worst_Waterelz12"))
+
+
+swellmash_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_SwellMash12", "Worst_SwellMash12"))
+
+garri_yield_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Gayield12", "Worst_Gayield12"))
+
+
+Traits_cor6 = c("ov_Garri_Proc_rank", "woodyfil_rank","peeling_rank","ease_proc_garri_rank","Garri_mash_rank","water_rank","swellmash_rank","garri_yield_rank")
+
+rank_out_cor6 = list(ov_Garri_Proc_rank= ov_Garri_Proc_rank, woodyfil_rank= woodyfil_rank,peeling_rank=peeling_rank,ease_proc_garri_rank= ease_proc_garri_rank,Garri_mash_rank= Garri_mash_rank,water_rank= water_rank,swellmash_rank= swellmash_rank,garri_yield_rank=garri_yield_rank)
+
+Tau_corMat6 = matrix(nrow = length(Traits_cor6), ncol = length(Traits_cor6))
+rownames(Tau_corMat6) <- Traits_cor6
+colnames(Tau_corMat6) <- Traits_cor6
+
+Tau_corPvalue6 = matrix(nrow = length(Traits_cor6), ncol = length(Traits_cor6))
+rownames(Tau_corPvalue6) <- Traits_cor6
+colnames(Tau_corPvalue6) <- Traits_cor6
+
+for(i in Traits_cor6){
+  for(j in Traits_cor6){
+    kt1 <- gosset::kendallTau(rank_out_cor6[[i]], rank_out_cor6[[j]])
+    Tau_corMat6[i,j] = round(kt1[1,1],3)
+    Tau_corPvalue6[i,j] = round(kt1[1,4],4)
+  }
+}
+Tau_corMat6
+
+Tau_corPvalue6
+write.csv(x=Tau_corMat6, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/rank_cor_processing.csv")
+write.csv(x=Tau_corPvalue6, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/pvals_rank_cor_processing.csv")
+```
+
+
+```{r, garri quality}
+ov_Garri_quality_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_GaqOvi12", "Worst_GaqOvi12"))
+
+
+garri_woodyfil_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Gaqwoodyfil12", "Worst_Gaqwoodyfil12"))
+
+
+garri_col_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_GaColour12", "Worst_GaqColour12"))
+
+
+garri_dryness_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_GaqDry12", "Worst_GaqDry12"))
+
+Garri_heaviness_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_GaqHeavy12", "Worst_GaqHeavy12"))
+
+garri_smoothness_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Gaqsmooth12", "Worth_Gaqsmooth12"))
+
+
+garri_taste_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_GaqTaste12", "Worst_GaqTaste12"))
+
+
+Traits_cor7 = c("ov_Garri_quality_rank" , "garri_woodyfil_rank", "garri_col_rank", "garri_dryness_rank" , "Garri_heaviness_rank", "garri_smoothness_rank","garri_taste_rank")
+
+rank_out_cor7 = list(ov_Garri_quality_rank =ov_Garri_quality_rank , garri_woodyfil_rank = garri_woodyfil_rank, garri_col_rank = garri_col_rank, garri_dryness_rank = garri_dryness_rank, Garri_heaviness_rank= Garri_heaviness_rank, garri_smoothness_rank=garri_smoothness_rank,garri_taste_rank= garri_taste_rank)
+
+Tau_corMat7 = matrix(nrow = length(Traits_cor7), ncol = length(Traits_cor7))
+rownames(Tau_corMat7) <- Traits_cor7
+colnames(Tau_corMat7) <- Traits_cor7
+
+Tau_corPvalue7 = matrix(nrow = length(Traits_cor7), ncol = length(Traits_cor7))
+rownames(Tau_corPvalue7) <- Traits_cor7
+colnames(Tau_corPvalue7) <- Traits_cor7
+
+for(i in Traits_cor7){
+  for(j in Traits_cor7){
+    kt1 <- gosset::kendallTau(rank_out_cor7[[i]], rank_out_cor7[[j]])
+    Tau_corMat7[i,j] = round(kt1[1,1],3)
+    Tau_corPvalue7[i,j] = round(kt1[1,4],4)
+  }
+}
+Tau_corMat7
+
+Tau_corPvalue7
+write.csv(x=Tau_corMat7, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/rank_cor_garri_quality.csv")
+write.csv(x=Tau_corPvalue7, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/pvals_rank_cor_garri_quality.csv")
+
+```
+
+```{r, eba quality}
+ov_eba_quality_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaOvi12", "Worst_EbaOvi12"))
+
+
+fresh_mould_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaMould12", "Worst_EbaMould12"))
+
+
+eba_soft_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaSoft12", "Worst_EbaSoft12"))
+
+eba_draw_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaDraw12", "Worst_EbaDraw12"))
+
+
+eba_smooth_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaSmooth12", "Worst_EbaSmooth12"))
+
+eba_color_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Ebacolour12", "Worst_Ebacolour12"))
+
+
+eba_sticky_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaNstick12", "Worst_Ebaswell12"))
+
+
+eba_swell_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Ebaswell12", "Worst_Ebaswell12"))
+
+
+eba_taste_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaTaste12", "Worst_EbaTaste12"))
+
+
+Traits_cor8 = c("ov_eba_quality_rank","fresh_mould_rank","eba_soft_rank","eba_draw_rank","eba_smooth_rank","eba_color_rank","eba_sticky_rank","eba_swell_rank","eba_taste_rank")
+
+rank_out_cor8 = list(ov_eba_quality_rank=ov_eba_quality_rank, fresh_mould_rank=fresh_mould_rank, eba_soft_rank=eba_soft_rank, eba_draw_rank=eba_draw_rank,  eba_smooth_rank=eba_smooth_rank, eba_color_rank=eba_color_rank, eba_sticky_rank=eba_sticky_rank, eba_swell_rank=eba_swell_rank, eba_taste_rank=eba_taste_rank)
+
+Tau_corMat8 = matrix(nrow = length(Traits_cor8), ncol = length(Traits_cor8))
+rownames(Tau_corMat8) <- Traits_cor8
+colnames(Tau_corMat8) <- Traits_cor8
+
+Tau_corPvalue8 = matrix(nrow = length(Traits_cor8), ncol = length(Traits_cor8))
+rownames(Tau_corPvalue8) <- Traits_cor8
+colnames(Tau_corPvalue8) <- Traits_cor8
+
+for(i in Traits_cor8){
+  for(j in Traits_cor8){
+    kt1 <- gosset::kendallTau(rank_out_cor8[[i]], rank_out_cor8[[j]])
+    Tau_corMat8[i,j] = round(kt1[1,1],3)
+    Tau_corPvalue8[i,j] = round(kt1[1,4],4)
+  }
+}
+Tau_corMat8
+
+Tau_corPvalue8
+write.csv(x=Tau_corMat8, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/rank_cor_eba_quality.csv")
+write.csv(x=Tau_corPvalue8, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/pvals_rank_cor_eba_quality.csv")
+
+```
+
+```{r, overnight eba quality}
+ov_ebaAF_quality_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFOvi12", "Worst_EbaAFOvi12"))
+
+
+EbaAF_mould_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFMould12", "Worst_EbaAFMould12"))
+
+
+EbaAF_soft_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFSoftness12", "Worst_EbaAFSoftness12"))
+
+EbaAF_draw_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFDraw12", "Worst_EbaAFDraw12"))
+
+
+EbaAF_smooth_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFSmooth12", "Worst_EbaAFSmooth12"))
+
+EbaAF_odor_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFNodour12", "Worst_EbaAFNodour12"))
+
+
+
+
+EbaAF_taste_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFTaste12", "Worst_EbaAFTaste12"))
+
+
+EbaAF_color_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFcolour12", "Worst_EbaAFcolour12"))
+
+Traits_cor9 = c("ov_ebaAF_quality_rank","EbaAF_mould_rank","EbaAF_soft_rank","EbaAF_draw_rank","EbaAF_smooth_rank","EbaAF_odor_rank", "EbaAF_taste_rank", "EbaAF_color_rank")
+
+rank_out_cor9 = list(ov_ebaAF_quality_rank=ov_ebaAF_quality_rank,EbaAF_mould_rank=EbaAF_mould_rank,EbaAF_soft_rank=EbaAF_soft_rank,EbaAF_draw_rank=EbaAF_draw_rank,EbaAF_smooth_rank=EbaAF_smooth_rank,EbaAF_odor_rank=EbaAF_odor_rank, EbaAF_taste_rank=EbaAF_taste_rank, EbaAF_color_rank=EbaAF_color_rank)
+
+Tau_corMat9 = matrix(nrow = length(Traits_cor9), ncol = length(Traits_cor9))
+rownames(Tau_corMat9) <- Traits_cor9
+colnames(Tau_corMat9) <- Traits_cor9
+
+Tau_corPvalue9 = matrix(nrow = length(Traits_cor9), ncol = length(Traits_cor9))
+rownames(Tau_corPvalue9) <- Traits_cor9
+colnames(Tau_corPvalue9) <- Traits_cor9
+
+for(i in Traits_cor9){
+  for(j in Traits_cor9){
+    kt1 <- gosset::kendallTau(rank_out_cor9[[i]], rank_out_cor9[[j]])
+    Tau_corMat9[i,j] = round(kt1[1,1],3)
+    Tau_corPvalue9[i,j] = round(kt1[1,4],4)
+  }
+}
+Tau_corMat9
+corrplot(Tau_corMat9,type='lower')
+
+Tau_corPvalue9
+
+write.csv(x=Tau_corMat9, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/rank_cor_overnight_eba_quality.csv")
+write.csv(x=Tau_corPvalue9, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/pvals_rank_cor_Overnight_eba_quality.csv")
+
+```
+
+```{r}
+
+```
+
+
+```{r, kendall's tau for both fresh and overnight eba quality}
+ov_eba_quality_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaOvi12", "Worst_EbaOvi12"))
+
+
+fresh_mould_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaMould12", "Worst_EbaMould12"))
+
+
+eba_soft_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaSoft12", "Worst_EbaSoft12"))
+
+eba_draw_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaDraw12", "Worst_EbaDraw12"))
+
+
+eba_smooth_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaSmooth12", "Worst_EbaSmooth12"))
+
+eba_color_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Ebacolour12", "Worst_Ebacolour12"))
+
+
+eba_sticky_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaNstick12", "Worst_Ebaswell12"))
+
+
+eba_swell_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_Ebaswell12", "Worst_Ebaswell12"))
+
+
+eba_taste_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaTaste12", "Worst_EbaTaste12"))
+
+ov_ebaAF_quality_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFOvi12", "Worst_EbaAFOvi12"))
+
+
+EbaAF_mould_rank <- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFMould12", "Worst_EbaAFMould12"))
+
+
+EbaAF_soft_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFSoftness12", "Worst_EbaAFSoftness12"))
+
+EbaAF_draw_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFDraw12", "Worst_EbaAFDraw12"))
+
+
+EbaAF_smooth_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFSmooth12", "Worst_EbaAFSmooth12"))
+
+EbaAF_odor_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFNodour12", "Worst_EbaAFNodour12"))
+
+
+
+
+EbaAF_taste_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFTaste12", "Worst_EbaAFTaste12"))
+
+
+EbaAF_color_rank<- gosset::rank_tricot(data = Rank22a, 
+                                    items = c("VARIETY.A",
+                                              "VARIETY.B",
+                                              "VARIETY.C"),
+                                    input = c("Best_EbaAFcolour12", "Worst_EbaAFcolour12"))
+
+
+
+Traits_cor11 = c("ov_eba_quality_rank","fresh_mould_rank","eba_soft_rank","eba_draw_rank","eba_smooth_rank","eba_color_rank","eba_sticky_rank","eba_swell_rank","eba_taste_rank", "ov_ebaAF_quality_rank","EbaAF_mould_rank","EbaAF_soft_rank","EbaAF_draw_rank","EbaAF_smooth_rank","EbaAF_odor_rank", "EbaAF_taste_rank", "EbaAF_color_rank")
+
+rank_out_cor11 = list(ov_eba_quality_rank=ov_eba_quality_rank, fresh_mould_rank=fresh_mould_rank, eba_soft_rank=eba_soft_rank, eba_draw_rank=eba_draw_rank,  eba_smooth_rank=eba_smooth_rank, eba_color_rank=eba_color_rank, eba_sticky_rank=eba_sticky_rank, eba_swell_rank=eba_swell_rank, eba_taste_rank=eba_taste_rank,   ov_ebaAF_quality_rank=ov_ebaAF_quality_rank,EbaAF_mould_rank=EbaAF_mould_rank,EbaAF_soft_rank=EbaAF_soft_rank,EbaAF_draw_rank=EbaAF_draw_rank,EbaAF_smooth_rank=EbaAF_smooth_rank,EbaAF_odor_rank=EbaAF_odor_rank, EbaAF_taste_rank=EbaAF_taste_rank, EbaAF_color_rank=EbaAF_color_rank)
+
+Tau_corMat11 = matrix(nrow = length(Traits_cor11), ncol = length(Traits_cor11))
+rownames(Tau_corMat11) <- Traits_cor11
+colnames(Tau_corMat11) <- Traits_cor11
+
+Tau_corPvalue11 = matrix(nrow = length(Traits_cor11), ncol = length(Traits_cor11))
+rownames(Tau_corPvalue11) <- Traits_cor11
+colnames(Tau_corPvalue11) <- Traits_cor11
+
+for(i in Traits_cor11){
+  for(j in Traits_cor11){
+    kt1 <- gosset::kendallTau(rank_out_cor11[[i]], rank_out_cor11[[j]])
+    Tau_corMat11[i,j] = round(kt1[1,1],3)
+    Tau_corPvalue11[i,j] = round(kt1[1,4],4)
+  }
+}
+Tau_corMat11
+
+Tau_corPvalue11
+
+write.csv(x=Tau_corMat11, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/rank_combine_eba_quality_cor.csv")
+write.csv(x=Tau_corPvalue11, "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/pvals_rank_cor_combine_eba_quality.csv")
+
+
+
+
+```
+
+
+
+
+
+```{r converting numeric data to rank data}
+install.packages("Matrix")
+source("/Users/ca384/Documents/ChinedoziRepo/TRICOT/TRICOT/Modelling_GXE_Tricot.R")
+
+Num22 # the numeric data
+
+colnames(Num22)
+idL= which(Num22$genotype=="local") # identify th local varieties
+Num22a = Num22[-idL,] #remove the local varieties
+dim(Num22a)
+colnames(Num22a)
+
+common_cols = c("package.number","farmers_number", "location", "farmers.name", "genotype.name","genotype", "variety_code")
+num_traits <- c("plt.arch","noh", "rt.shape", "rt.colour", "rot","sell.rt.no","unsell.rt.no",   "total.rt.no", "sellable.rt.wt", "unsellable.rt.wt","total.rt.wt","sht.wt","wa","ww",  "initial.plant.vigor" , "mean_ht","mean_brnch_ht","total_yield_plot",    
+"mkt_yield_plot","efficient_yield","total_root_num_plot", "mkt_root_number_plot", "efficient_rootNum","shwt_plot") 
+num_trt_disease = c("cbbi", "cbbs", "cadi", "cads")
+
+Num22_sel <- Num22a
+summary(Num22_sel)
+farm_num = unique(Num22_sel$farmers_number)
+data.frame(Num22_sel$farmers_number,Num22_sel$farmers.name )
+Rank_Num = tibble()
+for(i in farm_num){
+  for(j in num_traits){
+  dt = Num22_sel[Num22_sel$farmers_number == i,]
+  dt1 = dt[,j]
+  rnk = round(rank(desc(dt1)),0)
+  
+  dt3 = cbind(dt[,common_cols], Trait = j, dt1,rnk)
+  Rank_Num = rbind(Rank_Num,dt3)
+  }
+}
+view(Rank_Num)
+
+# disease
+Rank_disease = tibble()
+for(i in farm_num){
+  for(j in num_trt_disease){
+  dt = Num22_sel[Num22_sel$farmers_number == i,]
+  dt1 = dt[,j]
+  rnk = round(rank(dt1),0)
+  
+  dt3 = cbind(dt[,common_cols], Trait = j, dt1,rnk)
+ Rank_disease = rbind(Rank_disease,dt3)
+  }
+}
+
+
+All_Num_rank <- rbind(Rank_Num,Rank_disease)
+tail(All_Num_rank)
+All_Num_rank$dt1 = as.numeric(All_Num_rank$dt1)
+All_Num_rank_wo_NA = All_Num_rank[which(!is.na(All_Num_rank$dt1)),]
+summary(All_Num_rank_wo_NA$dt1)
+view(All_Num_rank_wo_NA)
+
+#Rank numeric()
+unique(All_Num_rank_wo_NA$farmers_number)
+All_Num_rank_wo_NA$package.number = as.integer(All_Num_rank_wo_NA$package.number)
+All_Num_rank_wo_NA$Trait = as.character(All_Num_rank_wo_NA$Trait)
+All_Num_rank_wo_NA$package.number = as.integer(All_Num_rank_wo_NA$package.number)
+All_Num_rank_wo_NA$genotype = as.character(All_Num_rank_wo_NA$genotype)
+
+All_Num_rank_wo_NA = as.data.frame(All_Num_rank_wo_NA)
+Traits <- unique(All_Num_rank_wo_NA$Trait)
+R <- vector(mode = "list", length = length(Traits))
+for (i in seq_along(Traits)) {
+  dat_T <- subset(All_Num_rank_wo_NA, All_Num_rank_wo_NA$Trait == Traits[i])
+
+R[[i]] = rank_numeric(data=dat_T,
+                   items = "genotype",
+                   input = "rnk",
+                   id= "package.number")
+}
+
+baseline <- which(grepl( "efficient_yield", Traits))
+# kendall <- lapply(R[-baseline], function(X){
+#   kendallTau(x = X, y = R[[baseline]])
+# # })
+# 
+# kendall <- do.call("rbind", kendall)
+# kendall$trait <- traits[-baseline]
+
+Traits
+ll = c(1:4,6:14,17:18,20:23,25:28)# genotype with complete data
+kendall_T <- list()
+for(i in ll){
+  kendall_T[[i]] <-  kendallTau(x = R[[i]], y = R[[baseline]])
+}
+kendall_T <- do.call("rbind", kendall_T)
+kendall_T$trait <- Traits[ll]
+kendall_T = kendall_T[,c(5,1:4)]
+view(kendall_T)
+
+
+```
+
+```{r, farmers Rank data kendal's tau}
+
+colnames(new_rank22)
+
+dim(new_rank22)
+colnames(new_rank22)
+
+ new_rank22[which(!is.na(new_rank22$Trait)),]
+summary(new_rank22$Trait)
+colnames(new_rank22)
+unique(new_rank22$Farmer_number)
+new_rank22$Farmer_number = as.integer(new_rank22$Farmer_number)
+new_rank22$Trait = as.character(new_rank22$Trait)
+new_rank22$Farmer_number = as.integer(new_rank22$Farmer_number)
+new_rank22$geno_Trait = as.character(new_rank22$geno_Trait)
+
+new_rank22 = as.data.frame(new_rank22)
+Traits <- unique(new_rank22$Trait)
+R <- vector(mode = "list", length = length(Traits))
+for (i in seq_along(Traits)) {
+  dat_T <- subset(new_rank22, new_rank22$Trait == Traits[i])
+
+R[[i]] = rank_numeric(data=dat_T,
+                   items = "geno_Trait",
+                   input = "Trait",
+                   id= "Farmer_number")
+}
+
+baseline <- which(grepl( "efficient_yield", Traits))
+# kendall <- lapply(R[-baseline], function(X){
+#   kendallTau(x = X, y = R[[baseline]])
+# # })
+# 
+# kendall <- do.call("rbind", kendall)
+# kendall$trait <- traits[-baseline]
+
+Traits
+ll = c(1:4,6:14,17:18,20:23,25:28)# genotype with complete data
+kendall_T <- list()
+for(i in ll){
+  kendall_T[[i]] <-  kendallTau(x = R[[i]], y = R[[baseline]])
+}
+kendall_T <- do.call("rbind", kendall_T)
+kendall_T$trait <- Traits[ll]
+kendall_T = kendall_T[,c(5,1:4)]
+view(kendall_T)
+
+
+```
+
+
+```{r Rank correlation of Rank tricot vs rank numeric}
+# R = rank rumeric
+
+```
+
+
+
+```{r trying the placketluce tree}
+#plotting plackettluce tree
+
+R_1map <- rank_tricot(data = Rank_22,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = c("Best_Ovi1", "Worst_Ovi1"), group = T)
+dim(R_1map)
+
+
+# 
+#ab = summary(mod_R_1p, ref= NULL) # The first genotype was set to zero, this code remove the ref
+#ab$coefficients
+
+# plotting the plakettluce tree
+covariates  <- Rank22[ ,c("SEX", "EDU", "MS", "COMMUNITY.NAME")]
+
+
+unique_geno <- unique(Rank22$VARIETY.A)
+covariates$SEX <- as.factor(covariates$SEX)
+covariates$EDU <- as.factor(covariates$EDU)
+covariates$MS <- as.factor(covariates$MS)
+
+covariates$COMMUNITY.NAME <- as.factor(covariates$COMMUNITY.NAME)
+
+pltree_1map <- pltree(R_1map ~ COMMUNITY.NAME, data = covariates,
+                      bonferroni = T,
+                      minsize = 20,
+                      alpha = .1) 
+
+plot(pltree_1map, labelsize=2,                       size = 12)
+axis(2, cex.axis = 2)
+
+
+```
+
+```{r for overall for 6MAP}
+ # To remove column with missing values
+R_6MAP<- rank_tricot(data = Rank_22,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = c("Best_Ovi6", "Worst_Ovi6"))
+
+mod_6map <- PlackettLuce(R_6MAP, npseudo = 0.5)
+Mod_6MAP_qv <- qvcalc(mod_6map) # tie is preventing the work
+
+
+# "Best_Ovi6", "Worst_Ovi6" has missing data in lines 17 and lowercase letters, I have to remove the missing data and change lowercase to uppercase, else r will see the lowercase as another level.
+Rank_22A = Rank_22[-17,]
+missing_geno <- is.na(Rank_22$Worst_Ovi6) # looking for missing data
+ # looking at the data to see how the rankings are. the rankings have some that have lower cases
+ # some data hove lower cases. this could be what is affecting the data
+
+
+Rank_22A$Best_Ovi6 = gsub(pattern = "a", replacement = "A", x = Rank_22A$Best_Ovi6) # replacing the lowercase A with uppercase A
+
+Rank_22A$Worst_Ovi6 = gsub(pattern = "b", replacement = "B", x = Rank_22A$Worst_Ovi6) # replace lowercase b with uppercase B
+
+
+
+R_6MAP<- rank_tricot(data = Rank_22A,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = c("Best_Ovi6", "Worst_Ovi6"))
+mod_6map <- PlackettLuce(R_6MAP, npseudo = 0.5) # run the model again
+Mod_6MAP_qv <- qvcalc(mod_6map) 
+
+
+
+Mod_6MAP_qv$qvframe <- Mod_6MAP_qv$qvframe[order(Mod_6MAP_qv$qvframe$estimate),]
+plot(Mod_6MAP_qv, las = 2, ylab = "Worth estimates", cex.axis=0.5, main = NULL)
+
+
+```
+
+
+```{r for overall for 9MAP}
+
+R_9map<- rank_tricot(data = Rank_22A,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = c("Best_overimpr9MAP", "Worst_overimpr9MAP"))
+
+mod_R_9p <- PlackettLuce(R_9map, npseudo = 0.5)
+Mod_9MAP_qv <- qvcalc(mod_R_9p) # tie is preventing the work
+Mod_9MAP_qv$qvframe <- Mod_9MAP_qv$qvframe[order(Mod_9MAP_qv$qvframe$estimate),]
+plot(Mod_9MAP_qv, las = 2, ylab = "Worth estimates", cex.axis=0.5, main = NULL)
+```
+
+
+```{r for overall for harvest}
+R_Hvst<- rank_tricot(data = Rank_22A,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = c("Best_HvOvi12", "Worst_HvOvi12"))
+
+mod_R_Hp <- PlackettLuce(R_Hvst, npseudo = 0.5)
+summary(mod_R_Hp)
+H_MAP_qv <- qvcalc(mod_R_Hp) # tie is preventing the work
+H_MAP_qv$qvframe <- H_MAP_qv$qvframe[order(H_MAP_qv$qvframe$estimate),]
+plot(H_MAP_qv, las = 2, ylab = "Worth estimates", cex.axis=0.5, main = NULL)
+
+```
+
+
+```{r for overall for processing data}
+R_processing<- rank_tricot(data = Rank_22A,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = c("Best_GapOvi12", "Worst_GapOvi12"))
+
+mod_R_P <- PlackettLuce(R_processing, npseudo = 0.5)
+summary(mod_R_P)
+P_MAP_qv <- qvcalc(mod_R_P) # tie is preventing the work
+P_MAP_qv$qvframe <- P_MAP_qv$qvframe[order(P_MAP_qv$qvframe$estimate),]
+plot(P_MAP_qv, las = 2, ylab = "Worth estimates", cex.axis=0.5, main = NULL)
+
+```
+
+```{r for overall for processing}
+R_garri_quality<- rank_tricot(data = Rank_22A,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = c("Best_GaqOvi12", "Worst_GaqOvi12"))
+
+mod_gari <- PlackettLuce(R_garri_quality, npseudo = 0.5)
+summary(mod_gari)
+gari_MAP_qv <- qvcalc(mod_gari) # tie is preventing the work
+gari_MAP_qv$qvframe <- gari_MAP_qv$qvframe[order(gari_MAP_qv$qvframe$estimate),]
+plot(gari_MAP_qv, las = 2, ylab = "Worth estimates", cex.axis=0.5, main = NULL)
+
+```
+
+
+```{r for overall for processing}
+R_eba_quality<- rank_tricot(data = Rank_22A,
+                     items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
+                     input = c("Best_EbaOvi12", "Worst_EbaOvi12"))
+mod_Eba <- PlackettLuce(R_eba_quality, npseudo = 0.5)
+summary(mod_Eba)
+Eba_qv <- qvcalc(mod_Eba) # tie is preventing the work
+Eba_qv$qvframe <- Eba_qv$qvframe[order(Eba_qv$qvframe$estimate),]
+plot(Eba_qv, las = 2, ylab = "Worth estimates", cex.axis=0.5, main = NULL)
+
+```
+
+```{r}
+par(mfrow=c(2,3))
+plot(Mod_1MAP_qv, las = 2, ylab = "Worth estimates", cex.axis=0.5, main = "Log worth estimates forAgronomic traits at 1MAP")
+plot(Mod_6MAP_qv, las = 2, ylab = "Log worth", cex.axis=0.5, main = "Log worth estimates forAgronomic traits at 6MAP")
+plot(Mod_9MAP_qv, las = 2, ylab = "Log worth", cex.axis=0.5, main ="Log worth estimates forAgronomic traits at 9MAP")
+
+par(mfrow=c(2,2))
+plot(H_MAP_qv, las = 2, ylab = "Log worth", cex.axis=0.5, main = "Log worth estimates for harvest data")
+plot(P_MAP_qv, las = 2, ylab = "Log worth", cex.axis=0.5, main =  "Log worth estimates for Processing")
+plot(gari_MAP_qv, las = 2, ylab = "Log worth", cex.axis=0.5, main = "Log worth estimates for garri quality")
+plot(Eba_qv, las = 2, ylab = "Log worth", cex.axis=0.5, main = "Log worth estimates for eba quality")
+```
+

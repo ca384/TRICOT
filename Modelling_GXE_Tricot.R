@@ -1,4 +1,7 @@
-packages_used <- c("workflowr","dplyr", "tidyverse", "ggplot2", "here", "stringr","lme4","metan", "FactoMineR","corrplot", "ASRgenomics", "reshape2", "Hmisc", "agricolae", "sommer", "PlackettLuce")
+packages_used <- c("workflowr","dplyr", "tidyverse", "ggplot2", "here",
+                   "stringr","lme4","metan", "FactoMineR","corrplot",
+                   "ASRgenomics", "reshape2", "Hmisc", "agricolae",
+                   "sommer", "PlackettLuce", "readr", "pheatmap", "Matrix")
 
 #install.packages(c("agricolae"))
 ip <- installed.packages()
@@ -24,10 +27,10 @@ head(Num_22)
 colnames(Num_22)
 Num22 = Num_22[,!colnames(Num_22) %in% c("comment" , "initial plant vigor")]
 colnames(Num22)
-head(Num22)
+summary(Num22)
 
 str(Num22)
-colnames(Num22)
+
 Num22$location <- as.factor(Num22$location)
 Num22$farmers_number <- as.factor(Num22$farmers_number)
 Num22$farmers.name<- as.factor(Num22$farmers.name)
@@ -45,7 +48,8 @@ Num22$brnch.ht2 <-as.numeric(Num22$brnch.ht2)
 Num22$brnch.ht3 <-as.numeric(Num22$brnch.ht3)
 Num22$rt.shape <- as.numeric(Num22$rt.shape)
 Num22$rt.colour <- as.numeric(Num22$rt.colour)
-Num22$unsell.rt.no <- as.numeric(Num22$sell.rt.no)
+Num22$unsell.rt.no <- as.numeric(Num22$unsell.rt.no)
+Num22$sell.rt.no <- as.numeric(Num22$sell.rt.no)
 Num22$total.rt.no <- as.numeric(Num22$total.rt.no)
 Num22$sellable.rt.wt <- as.numeric(Num22$sellable.rt.wt)
 Num22$total.rt.wt <- as.numeric(Num22$total.rt.wt)
@@ -69,10 +73,10 @@ Num22$efficient_rootNum = (Num22$mkt_root_number_plot/Num22$total_root_num_plot)
 Num22$shwt_plot = (Num22$sht.wt *30)/Num22$noh
 
 ### snps data
-tricot_snp= read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/Tricot_22/29_tricot_snps.tsv", sep = "\t")
-dim(tricot_snp)
-colnames(tricot_snp)
-Num22$genotype
+# tricot_snp= read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/Tricot_22/29_tricot_snps.tsv", sep = "\t")
+# dim(tricot_snp)
+# colnames(tricot_snp)
+# Num22$genotype
 
 # data transformation
 #Num22$log_total_yield <- log(Num22$total_yield_plot)
@@ -83,60 +87,129 @@ Num22$genotype
 #Num22$eff_yield <- log(Num22$efficiet_yield)
 #Num22$log_eff_rootNum <- log(Num22$efficiet_rootNum)
 # for yield per plot
-model1 <- lm(formula = total_yield_plot~ genotype + farmers_number, data = Num22 ) # better model
-summary.aov(model1)
-anova(model1)
 
-model1a <- lm(formula = total_yield_plot~ genotype + farmers_number + farmers_number:location + location +  genotype:location,data = Num22 ) # better model
-summary.aov(model1a)
+colnames(Num22)
+idL= which(Num22$genotype=="local") # identify th local varieties
+Num22a = Num22[-idL,] #remove the local varieties
+dim(Num22a)
+colnames(Num22a)
 
-model1b <- lmer(formula = total_yield_plot~ genotype +
-                  (1|farmers_number:location) + location +
-                  genotype:location,data = Num22 ) # better model
-anova(model1b)
-summary(model1b)
-library(lmerTest)
+Num22a$rot = as.numeric(Num22a$rot)
+Traits <- colnames(Num22a)[-c(1:14, 16, 17, 21, 24, 27:28)] # remove these cells
+library(tibble)
+id_o <- which(Num22a$efficient_yield == 0) # find values less than 0
 
-lmerTest::ranova(model1b)
-summary(Num22)
-round(abs(stats::rstudent(model = model1)),3)
-model1$residuals
+Num22b = Num22a
+Num22b[id_o, "efficient_yield"] = NA # change the 0s to NA
+#id_wt <- which(Num22a$unsellable.rt.wt == 0)
+#Num22b[id_wt, "unsellable.rt.wt"] = NA
+Blupmean_1 = tibble()
+for(Trait in Traits){
+eval(parse(text = paste(
+"outmod <- lmer(",Trait," ~ (1|genotype) +
+(1|farmers_number:location)+ (1|location), data = Num22b )" # better model
+)))
+idout <- which(abs(stats::rstudent(outmod)) >3) # remove outliers
+if(length(idout) == 0){
+Numx <- Num22b}else{
+  Numx <- Num22b[-idout,]
+}
 
-
-summary.aov(model1)
-fff = fitted(model1)
-fff
-model1$coefficients
-pp = predict(object = model1)
-pp
-emmeans::emmeans(object = model1, specs = "genotype")
-off<- c(171, 197,261) # subset the outliers
-
-Num22[off,c("total_yield_plot","genotype.name","location", "farmers.name")] # select the. outliers from the data frame
-Num22[off,"total_yield_plot"]=NA # make the selected outliers NA
-
-#outlier_total_yield <-which(Num22$total_yield_plot %in% boxplot.stats(Num22$total_yield_plot)$out) #Removing outliers using boxplot stat
-#Num22$total_yield_plot[outlier_total_yield] = NA
-
-
-model1 <- lmer(formula = total_yield_plot~ (1|genotype) + location +   (1|genotype:location), data = Num22 ) # better model
+eval(parse(text = paste(
+"model1 <- lmer(",Trait," ~ (1|genotype) + (1|farmers_number:location) + (1|location), data = Numx )")))
 summary(model1)
+prd = coef(model1) # get the coefficient of the model
+prd1 = prd$genotype
+colnames(prd1)[1] = "BLUPsMean"
+prd1$Genotype = rownames(prd1)
+prd1 = prd1[,c(2,1)]
+rownames(prd1) = NULL
+prdT <- cbind(Trait = Trait, prd1)
+Blupmean_1 = rbind(Blupmean_1, prdT)
+}
 
-ff = coef(model1)
-predict(model1)
-plot(model1)
-ff$genotype
-data.frame(predict(model1))
-view(Num22)
-unique(Num22$genotype)
-library(sommer)
-model2 <- mmer(fixed = total_yield_plot~ location,
-               random = ~ genotype + genotype:location,
-               data = Num22 ) # better model
-model2$U$genotype$total_yield_plot + model2$
-summary(model2)
+which(abs(stats::rstudent(model1)) >3)
+library(reshape2)
+Blupmean_1wide = dcast(data = Blupmean_1, formula = Genotype ~ Trait,
+      fun.aggregate = mean, value.var = "BLUPsMean", na.rm = T)
+rownames(Blupmean_1wide) = Blupmean_1wide$Genotype
+meanheat = Blupmean_1wide[,-1]
+str(meanheat)
+head(meanheat)
+meanheat = as.matrix(meanheat)
+meanheatsc = scale(meanheat)
 
-x11
+pheatmap(meanheatsc, display_numbers = T, fontsize = 7) # A heatmap that displays values in the cell
+#heatmap(x = meanheatsc, cex.axis =10)
+str(Blupmean_1wide)
+
+install.packages("readr") # to read in the .tsv data
+# Load the installed Package
+library(readr)
+
+
+# model1a <- lmer(formula = total_yield_plot ~ (1|genotype) + (1|location), data = Num22a ) # better model
+# summary(model1a)
+# anova(model1a)
+#
+# model1b <- lmer(formula = total_yield_plot~ (1|genotype) + (1|location) + (1|farmers_number), data = Num22a ) # better model
+# summary(model1b)
+# anova(model1b)
+#
+# model1c <- lmer(formula = total_yield_plot~ (1|genotype) + (1|location) + (1|farmers_number:location), data = Num22a ) # better model
+# summary(model1c)
+# anova(model1c)
+#
+# model1a <- lmer(formula = total_yield_plot ~ (1|genotype) + (1|location) +(1|farmers_number)+ (1|genotype:location), data = Num22a ) # better model
+# summary(model1a)
+# anova(model1a)
+# model1a <- lmer(formula = total_yield_plot ~ (1|genotype) + (1|farmers_number), data = Num22a ) # better model
+# summary(model1a)
+# anova(model1a)
+
+
+
+#
+# lmerTest::ranova(model1b)
+# summary(Num22)
+# round(abs(stats::rstudent(model = model1)),3)
+# model1$residuals
+#
+#
+# summary.aov(model1)
+# fff = fitted(model1)
+# fff
+# model1$coefficients
+# pp = predict(object = model1)
+# pp
+# emmeans::emmeans(object = model1, specs = "genotype")
+# off<- c(171, 197,261) # subset the outliers
+#
+# Num22[off,c("total_yield_plot","genotype.name","location", "farmers.name")] # select the. outliers from the data frame
+# Num22[off,"total_yield_plot"]=NA # make the selected outliers NA
+#
+# #outlier_total_yield <-which(Num22$total_yield_plot %in% boxplot.stats(Num22$total_yield_plot)$out) #Removing outliers using boxplot stat
+# #Num22$total_yield_plot[outlier_total_yield] = NA
+#
+#
+# model1 <- lmer(formula = total_yield_plot~ (1|genotype) + location +   (1|genotype:location), data = Num22 ) # better model
+# summary(model1)
+#
+# ff = coef(model1)
+# predict(model1)
+# plot(model1)
+# ff$genotype
+# data.frame(predict(model1))
+# view(Num22)
+# unique(Num22$genotype)
+# library(sommer)
+# model2 <- mmer(fixed = total_yield_plot~ location,
+#                random = ~ genotype + genotype:location,
+#                data = Num22 ) # better model
+# model2$U$genotype$total_yield_plot + model2$
+# summary(model2)
+
+
 ggplot(data = Num22,aes(x= total_yield_plot, y=location,fill=genotype)) +
   geom_boxplot() # cluster on location
 ggplot(data = Num22,aes(x= total_yield_plot, y=genotype,fill=genotype)) +
@@ -155,124 +228,87 @@ Num22[off2,"total_root_num_plot"]=NA
 outlier_total_rootNum <-which(Num22$total_root_num_plot %in% boxplot.stats(Num22$total_root_num_plot)$out) #Removing outliers using boxplot stat
 Num22$total_root_num_plot[outlier_total_rootNum] = NA
 
-x11
 ggplot(data = Num22,aes(x= total_root_num_plot, y=location,fill=genotype)) +
   geom_boxplot()
 ggplot(data = Num22,aes(x= total_root_num_plot, y=genotype,fill=genotype)) +
   geom_boxplot()
 
-model2 <- lm(formula = total_root_num_plot~ genotype + location +  genotype:location,data = Num22 ) # better model
-plot(model2)
-summary.aov(model2)
+# model2 <- lm(formula = total_root_num_plot~ genotype + location + data = Num22 ) # better model
+# plot(model2)
+# summary.aov(model2)
 
 # effecient yield
-model3 <- lm(formula = efficient_yield~ genotype + location +  farmers_number + location:farmers_number+ genotype:location,data = Num22 ) # better model
-plot(model3)
-summary.aov(model3)
-off3 <- c(209,173,190)
-Num22[off3,c("efficient_yield","genotype.name","location", "farmers.name")] # select the. outliers from the data frame
-Num22[off3,"efficient_yield"]=NA
-outlier_eff_yield <-which(Num22$efficient_yield %in% boxplot.stats(Num22$efficient_yield)$out) #Removing outliers using boxplot stat
-Num22$efficient_yield[outlier_eff_yield] = NA
-
-x11
-ggplot(data = Num22,aes(x= efficient_yield, y=location,fill=genotype)) +
-  geom_boxplot()
-ggplot(data = Num22,aes(x= efficient_yield, y=genotype,fill=genotype)) +
-  geom_boxplot()
-
-
-
-summary(Num22)
-
-x11()
-par(mfrow=c(2,5))
-hist(Num22$mean_brnch_ht)
-hist(Num22$mean_ht)
-hist(Num22$total_yield_plot)
-hist(Num22$mkt_yield_plot)
-hist(Num22$total_root_num_plot)
-hist(Num22$mkt_root_number_plot)
-hist((Num22$efficiet_yield))
-hist(Num22$efficiet_rootNum)
-hist(log(Num22$shwt_plot))
+# model3 <- lm(formula = efficient_yield~ genotype + location +  farmers_number + location:farmers_number+ genotype:location,data = Num22 ) # better model
+# plot(model3)
+# summary.aov(model3)
+# off3 <- c(209,173,190)
+# Num22[off3,c("efficient_yield","genotype.name","location", "farmers.name")] # select the. outliers from the data frame
+# Num22[off3,"efficient_yield"]=NA
+# outlier_eff_yield <-which(Num22$efficient_yield %in% boxplot.stats(Num22$efficient_yield)$out) #Removing outliers using boxplot stat
+# Num22$efficient_yield[outlier_eff_yield] = NA
+#
+# x11
+# ggplot(data = Num22,aes(x= efficient_yield, y=location,fill=genotype)) +
+#   geom_boxplot()
+# ggplot(data = Num22,aes(x= efficient_yield, y=genotype,fill=genotype)) +
+#   geom_boxplot()
 
 
-x11()
-par(mfrow=c(2,5))
-hist(Num22$mean_brnch_ht)
-hist(Num22$mean_ht)
-hist(Num22$log_total_yield)
-hist(Num22$log_mkt_wt)
-hist(Num22$log_total_root_num)
-hist(Num22$log_mkt_num)
-hist(Num22$log_shwt)
-hist(Num22$eff_yield)
-hist(Num22$log_eff_rootNum)
-
-library(gosset)
-model2 <- lm(formula =log_total_yield~ genotype.name + location + farmers.name:location +
-               genotype.name:location,data = Num22 )
-plot(model2)
-summary.aov(model2)
-predict(model2)
-ggplot(data = Num22,aes(x= log_total_yield, y=genotype.name,fill=genotype.name)) +
-  geom_boxplot()
-
-
+# model2 <- lm(formula =log_total_yield~ genotype.name + location + farmers.name:location +
+#                genotype.name:location,data = Num22 )
+# plot(model2)
+# summary.aov(model2)
+# predict(model2)
+# ggplot(data = Num22,aes(x= log_total_yield, y=genotype.name,fill=genotype.name)) +
+#   geom_boxplot()
 
 library(dplyr)
 library(daewr)
-tab1 <- xtabs(~ genotype + farmers_number+location, data = Num22)
-fit.yield <- aov(total_yield_plot ~ genotype + farmers_number+location, data = Num22)
-drop1(fit.yield, test = "F")
+# tab1 <- xtabs(~ genotype + farmers_number+location, data = Num22)
+# fit.yield <- aov(total_yield_plot ~ genotype + farmers_number+location, data = Num22)
+# drop1(fit.yield, test = "F")
 
 
 library(multcomp)
 
-contr_yield <- glht(fit.yield, linfct = mcp(genotype  = "Tukey"))
-summary(contr_yield, test = adjusted("none"))
-contr_yield$vcov
-
-
-
-
-
+# contr_yield <- glht(fit.yield, linfct = mcp(genotype  = "Tukey"))
+# summary(contr_yield, test = adjusted("none"))
+# contr_yield$vcov
 
 library(stats)
-traitnames<- (c("Num22$mean_brnch_ht","mean_ht", "total_yield_plot", "mkt_yield_plot", "total_root_num_plot", "Cmkt_root_number_plot", "efficiet_yield", "efficiet_rootNum"))
-filtered_value <- tibble()
-for(traits in traitnames){
-  trs = paste0(traits) # the loop will be able to select  and analyse each trait
-  out_ind <- which(Num22[,paste(traits)] %in% boxplot.stats(Num22[,paste(traits)])$out) # outliers
-  if(length(out_ind) == 0){
-    New_Data = Num22
-  }else{
-    New_Data = Num22[-out_ind,] # detect outliers
-  }
-
-  Bx_1 <- New_Data[,traits]
-  Bx_2 <- cbind(farmers_number=as.character(New_Data$farmers_number), genotype.name=as.character(New_Data$genotype.name), location= as.character(New_Data$location), trait=paste0(traits), value=Bx_1)
-  filtered_value= rbind(filtered_value, Bx_2)
-}
-
-# long format
-
-
-filtered_value$value=as.numeric(filtered_value$value)
-global_size=8
-ggplot(filtered_value, aes(x = Location, y=value, fill=Location))+
-  geom_boxplot(outlier.shape = NA) +
-  facet_grid(trait~Year,  scales = "free") +
-  theme_classic(base_size = global_size)
-
-filtered_value$value = as.numeric(filtered_value$value)
-ddd_new = dcast(data = filtered_value, formula = Year + Location + Geno ~ trait, fun.aggregate = mean, value.var = "value", na.rm= T) # mean of the genotypes across location and years
-indv_cor <- round(cor(ddd_new[, -c(1,2,3)],use = "pairwise.complete.obs"),3)
-corrplot(indv_cor, type = "upper",method = "number", number.digits = 3, is.corr = T)
-
-H=(34.68/27)/((230.73 /79) + (161.57/6) + (51.00/(27*6)))
-
+# traitnames<- (c("Num22$mean_brnch_ht","mean_ht", "total_yield_plot", "mkt_yield_plot", "total_root_num_plot", "Cmkt_root_number_plot", "efficiet_yield", "efficiet_rootNum"))
+# filtered_value <- tibble()
+# for(traits in traitnames){
+#   trs = paste0(traits) # the loop will be able to select  and analyse each trait
+#   out_ind <- which(Num22[,paste(traits)] %in% boxplot.stats(Num22[,paste(traits)])$out) # outliers
+#   if(length(out_ind) == 0){
+#     New_Data = Num22
+#   }else{
+#     New_Data = Num22[-out_ind,] # detect outliers
+#   }
+#
+#   Bx_1 <- New_Data[,traits]
+#   Bx_2 <- cbind(farmers_number=as.character(New_Data$farmers_number), genotype.name=as.character(New_Data$genotype.name), location= as.character(New_Data$location), trait=paste0(traits), value=Bx_1)
+#   filtered_value= rbind(filtered_value, Bx_2)
+# }
+#
+# # long format
+#
+#
+# filtered_value$value=as.numeric(filtered_value$value)
+# global_size=8
+# ggplot(filtered_value, aes(x = Location, y=value, fill=Location))+
+#   geom_boxplot(outlier.shape = NA) +
+#   facet_grid(trait~Year,  scales = "free") +
+#   theme_classic(base_size = global_size)
+#
+# filtered_value$value = as.numeric(filtered_value$value)
+# ddd_new = dcast(data = filtered_value, formula = Year + Location + Geno ~ trait, fun.aggregate = mean, value.var = "value", na.rm= T) # mean of the genotypes across location and years
+# indv_cor <- round(cor(ddd_new[, -c(1,2,3)],use = "pairwise.complete.obs"),3)
+# corrplot(indv_cor, type = "upper",method = "number", number.digits = 3, is.corr = T)
+#
+# H=(34.68/27)/((230.73 /79) + (161.57/6) + (51.00/(27*6)))
+#
 
 
 
@@ -282,12 +318,12 @@ H=(34.68/27)/((230.73 /79) + (161.57/6) + (51.00/(27*6)))
 install.packages("PerformanceAnalytics")
 
 
-  library(PerformanceAnalytics)
-
-chart.Correlation(data, histogram = TRUE, method = "pearson")
-
-
-chart.Correlation(data, histogram = TRUE, method = "pearson")
+ # library(PerformanceAnalytics)
+#
+# chart.Correlation(data, histogram = TRUE, method = "pearson")
+#
+#
+# chart.Correlation(data, histogram = TRUE, method = "pearson")
 
 # import rank data
 Rank_22 <- read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/Tricot_22/ALL_TRICOT_Anchoring.csv")
@@ -346,10 +382,10 @@ for(j in 1:nrow(Rank22)){
   # rw[,16:length(colnames(rw))] = gsub(pattern = "C",
   #                                         replacement = vrt[3],
   #                                         x = rw[,16:length(colnames(Rank22))], fixed = T,ignore.case = F)
-  rowconv = rbind(rowconv, rw)
+  rowconv = rbind(rowconv, rw) # converted the ABC ranks to genotype names
 
 }
-#rowconv has the variety names insted the ranking alphabets
+#rowconv has the variety names instead the ranking alphabets
 
 #checking to see If the code names were modified correctly
 rowconv$Best_Ovi3
@@ -367,8 +403,8 @@ unique(rowconv$VARIETY.C)
 colnames(rowconv)
 
 #Want to transform the dataframe to have
-rank22_chnged = rowconv[,-c(12:14)] # variety.ABC because the genotype are already represented in the trait evaluated
-view(rank22_chnged)
+rank22_chnged = rowconv[,-c(12:14)] # removed columns containing  variety.ABC because the genotype are already represented in the trait evaluated
+head(rank22_chnged)
 
 colnames(rank22_chnged)
 # introduce a new colunm called the geno_Trait and convert the rank22_chnged into a long format
@@ -384,10 +420,10 @@ tail(rank_22_new)
 unique(rank_22_new$geno_Trait)
 head(rank_22_new)
 view(rank_22_new)
-which(is.na(rank_22_new$geno_Trait))
-which(rank_22_new$Trait == "<NA>")
+which(is.na(rank_22_new$geno_Trait))# identify traits with no information
+which(rank_22_new$Trait == "<NA>") # identify NAs
 view(rank_22_new)
-rank_22_new_ord = rank_22_new[order(rank_22_new$geno_Trait),]
+rank_22_new_ord = rank_22_new[order(rank_22_new$geno_Trait),]# order the df base on the geno_Trait
 tail(rank_22_new_ord)
 head(rank_22_new_ord)
 
@@ -546,7 +582,7 @@ library(dplyr)
 install.packages("gridExtra")
 library(gridExtra)
 library(ggpubr)
-ggpubr::ggarrange()
+
 # make a matrix of all the plots
 
 ggarrange(p1 + rremove("x.text"), p2 + rremove("x.text"), p3 + rremove("x.text"), p4 , p5, p6 ,
@@ -596,8 +632,8 @@ ggplot(jar22_long ) +
            stat="identity", fill= "skyblue") + theme_bw() +
   theme(axis.text.x  = element_text(angle = 90, face = "bold", size = 6)) +
   geom_errorbar( aes(x=Variety, ymin=Score-jar22_SE_long$Score, ymax=Score+jar22_SE_long$Score), width=0.1,
-                 colour="black", alpha=0.9, size=0.2) + facet_wrap(Trait ~.)jar22_SE_long
- facet_null()
+                 colour="black", alpha=0.9, size=0.2) + facet_wrap(Trait ~.)
+ #facet_null()
  ccx = jar22_long[jar22_long$Variety == "Local",]
 sum(ccx$Score)
 
@@ -631,12 +667,7 @@ model_md <- lm(formula = mouldability ~ Variety + COMMUNITY.NAME +  Variety:COMM
 summary.aov(model_md)
 
 
-
-
-
-
-
-
+##
 
 ##inport texture data (TPA)
 texture_fresh <- read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/Tricot_22/Texture_profiling/ fresh_texture/All_fresh_texture.csv")
@@ -702,30 +733,16 @@ library()
 # ccc = texture_fresh_aggreg$farmers_name
 # ccc[idF] = "Azuama Joy"
 # }
-data.frame(unique(Num22$farmers.name),unique(texture_fresh_aggreg$farmers_name))
-plot(texture_fresh$Adhesiveness)
-plot(texture_overnight$Adhesiveness)
+#data.frame(unique(Num22$farmers.name),unique(texture_fresh_aggreg$farmers_name))
+#plot(texture_fresh$Adhesiveness)
+#plot(texture_overnight$Adhesiveness)
 
 
 
 
 library(PlackettLuce)
 ## correlation with JAR22 and
-Rank22
-Rank22$VARIETY.A
-R_1map <- rank_tricot(data = Rank22,
-                      items = c("VARIETY.A" ,"VARIETY.B",  "VARIETY.C"),
-                      input = c("Best_Ovi1", "Worst_Ovi1"))
-dim(R_1map)
-mod_R_1p <- PlackettLuce(R_1map, npseudo = 0.5)
-#summary(Mod_1MAP_qv)
-#datplt = as.data.frame(summary(mod_R_1p$rankings))
-Mod_1MAP_qv <- qvcalc(mod_R_1p )
-Mod_1MAP_qv$qvframe <- Mod_1MAP_qv$qvframe[order(Mod_1MAP_qv$qvframe$estimate),]
-#Mod_1MAP_qv$qvframe <- Mod_1MAP_qv$qvframe
-#plot(x=Mod_1MAP_qv$qvframe)
-plot(Mod_1MAP_qv, las = 2, ylab = "Worth estimates", cex.axis=0.5, main = NULL)
-#axis(
+
 Jar22
 
 # plot(model4)
@@ -748,5 +765,5 @@ summary(processing_22)
 
 
 # linear model and repeatability
-model1 <- lmer(Num22$total_yield_plot~Farmer, data= Num22)
-Num22[Num22$farmers.name=="Chinazom Oguguo",c("total_yield_plot","genotype.name","location", "farmers.name")]
+# model1 <- lmer(Num22$total_yield_plot~Farmer, data= Num22)
+# Num22[Num22$farmers.name=="Chinazom Oguguo",c("total_yield_plot","genotype.name","location", "farmers.name")]

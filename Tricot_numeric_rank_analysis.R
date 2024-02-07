@@ -182,3 +182,46 @@ All_Num_rank$dt1 = as.numeric(All_Num_rank$dt1)
 All_Num_rank_wo_NA = All_Num_rank[which(!is.na(All_Num_rank$dt1)),]
 summary(All_Num_rank_wo_NA$dt1)
 view(All_Num_rank_wo_NA)
+
+
+#Rank numeric()
+unique(All_Num_rank_wo_NA$farmers_number)
+All_Num_rank_wo_NA$package.number = as.integer(All_Num_rank_wo_NA$package.number)
+All_Num_rank_wo_NA$Trait = as.character(All_Num_rank_wo_NA$Trait)
+All_Num_rank_wo_NA$package.number = as.integer(All_Num_rank_wo_NA$package.number)
+All_Num_rank_wo_NA$genotype = as.character(All_Num_rank_wo_NA$genotype)
+
+All_Num_rank_wo_NA = as.data.frame(All_Num_rank_wo_NA)
+Traits <- unique(All_Num_rank_wo_NA$Trait)
+R <- vector(mode = "list", length = length(Traits))
+for (i in seq_along(Traits)) {
+  dat_T <- subset(All_Num_rank_wo_NA, All_Num_rank_wo_NA$Trait == Traits[i])
+
+R[[i]] = rank_numeric(data=dat_T,
+                   items = "genotype",
+                   input = "rnk",
+                   id= "package.number")
+}
+
+baseline <- which(grepl( "efficient_yield", Traits))
+kendall <- lapply(R[-baseline], function(X){
+  kendallTau(x = X, y = R[[baseline]])
+})
+
+kendall <- do.call("rbind", kendall)
+kendall$trait <- traits[-baseline]
+
+Traits
+ll = c(1:4,6:14,17:18,20:23,25:28)
+kendall_T <- list()
+for(i in ll){
+  kendall_T[[i]] <-  kendallTau(x = R[[i]], y = R[[baseline]])
+}
+kendall_T <- do.call("rbind", kendall_T)
+kendall_T$trait <- Traits[ll]
+
+view(kendall_T)
+
+dim(R)
+R[[1]]
+dim(R[[1]])
