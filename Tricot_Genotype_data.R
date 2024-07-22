@@ -39,11 +39,12 @@ head(trsnps_mf[1:10,1:10])
 Tri_snp_num = trsnps_mf
 
 Tri_pc = PCA(Tri_snp_num ,scale.unit = T)
-snpsc_Tri = scale(Tri_snp_num, center = T, scale = T)
-snpsc_Trisc = scale(snpsc_Tri)
+snpsc_Tri = scale(Tri_snp_num, center = T)
+#snpsc_Trisc = scale(snpsc_Tri)
 ds_Tri = dist(snpsc_Tri)
-hc_Tri = hclust(ds_Tri)
+hc_Tri = hclust(ds_Tri,method = "ward.D")
 plot(hc_Tri, hang = -1)
+
 cl_Tri = cutree(tree = hc_Tri, k = 5)
 cl_Tri = as.factor(cl_Tri)
 # factoextra::fviz_pca_ind(Tri_pc ,
@@ -56,11 +57,18 @@ library(circlize)
 # Hierarchical clustering dendrogram
 hc_Tri1 <- as.dendrogram(hc_Tri)
 hc_Tri1 <-hc_Tri1 %>%
-  color_branches(k = 4)%>%
-  color_labels(k = 4)
+  color_branches(k = 3)%>%
+  color_labels(k = 3)
+
+
+dend <- as.dendrogram(hc_Tri1)
+dend <- dend %>% set("labels_cex", 0.6 )
+
+# Plot dendrogram
+plot(dend)
 
 par(cex=0.6, mar=c(1,1,1,1) )
- circlize_dendrogram( hc_Tri1,
+ circlize_dendrogram(hc_Tri1,
                     labels_track_height = 0.3,
                     dend_track_height = 0.4)
 
