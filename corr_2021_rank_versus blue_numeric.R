@@ -1,6 +1,9 @@
 #harvest_blues<- read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/tricot21_numeric_Blue.csv") # the BLUE means for on farm numeric data
 
-harvest_blues<-read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/tricot21_numeric_Blue_missing_rename.csv" ) # the BLUE means for on farm numeric data
+#harvest_blues<-read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/tricot21_numeric_Blue_missing_rename.csv" ) # the BLUE means for on farm numeric data
+harvest_blues=read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/tricot21_numeric_Blue_Prophav_rename.csv" ) # the BLUE means for on farm numeric data
+
+
 
 chem_blues<- read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/tricot21_garri_chem_Blue.csv" ) # the BLUE means for on farm numeric data
 
@@ -8,7 +11,7 @@ chem_blues<- read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/tricot
 
 Trait_list21_HV= list(c("Root_yield_Best","Root_yield_Worst"),
                       c( "Root_size_Best","Root_size_Worst"),
-                      #c( "Root_shape_Best","Root_shape_Worst"),
+                      c( "Root_shape_Best","Root_shape_Worst"),
                       c("Root_rot_Best","Root_rot_Worst"),
                       c("Harvest_Ovi_Best" , "Harvest_Ovi_Worst"))
 
@@ -56,20 +59,24 @@ tricot_sumMean_H <- as.data.frame(tricot_sumMean_H) # tricot worth at harvest
 
 
 
-Traitnames <- c("Root_yield_R","Root_size_R", "Root_shape_R",
+Traitnames <- c("Yield_R","Root_size_R", "Root_shape_R",
 "Root_rot_R","Harvest_impression_R")
 colnames(tricot_sumMean_H) <- Traitnames
-harvest_blues <- harvest_blues[,-1]
+harvest_blues2 <- harvest_blues[-c(1,2)]
 
 
-Tratnames_numeric<-c("Genotype" , "yield_of", "shoot_weight_of" , "number_roots_of",
-                     "plant_height_of","first_branch_ht_of","rotten_roots_of" )
+  #dplyr::rename("Yield_N"="yield_of", "Shoot_weight_N"= "shoot_weight_of" ,"Number_roots_N"= "number_roots_of",
+               # "Plant_height_N"= "plant_height_of", "First_branch_ht_N"="first_branch_ht_of","Rotten_roots_N"="rotten_roots_of")
+
+#Tratnames_numeric<-c( "Genotype" , "Yield_of","Shoot_weight_of" ,
+                    # "Number_of_roots_of", "Plant_height_of",
+                     #"First_branch_ht_of", "Rotten_roots_of"  )
 
 
-colnames(harvest_blues) <- Tratnames_numeric
+#colnames(harvest_blues2) <- Tratnames_numeric
 library(psych)
 library(corrplot)
-rank_BLUE_cor <- corTest(tricot_sumMean_H, harvest_blues[,-c(1)])
+rank_BLUE_cor <- corTest(tricot_sumMean_H, harvest_blues2[,-c(1)])
 
 rank_BLUE_cor$r = round(rank_BLUE_cor$r, 2)
 rank_BLUE_cor$r
