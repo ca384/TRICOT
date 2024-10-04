@@ -1,10 +1,3 @@
----
-  title: "Tricot for 2022 data"
-output: html_document
-date: "2023-02-23"
----
-
-
 # packages
 packages_used <- c("workflowr","tidyverse", "ggplot2" ,"climatrends" , "PlackettLuce","gosset",
                    "patchwork" , "ggparty" , "igraph" , "ClimMobTools", "multcompView",
@@ -52,7 +45,7 @@ for(i in colnames(Rank22)){
   Rank22[,i] = as.factor(Rank22[,i])
 }
 summary(Rank22)
-Rank22 == "C " = "C"
+#Rank22 == "C " = "C"
 Rank22a = Rank22
 Rank22a == "C "
 Rank22a[Rank22a == "C "] = "C"
@@ -152,11 +145,11 @@ summary(Num22a)
 farm_num = unique(Num22_sel$farmers_number) # dentify the farmers number
 data.frame(Num22_sel$farmers_number,Num22_sel$farmers.name ) #convert to dataframe
 
-ggplot(data = Num22_sel,aes(x= yield_per_plot, y=location,fill=genotype)) +
-  geom_boxplot()
-
-ggplot(data = Num22_sel,aes(x= root_num_plot, y=location,fill=genotype)) +
-  geom_boxplot()
+# ggplot(data = Num22_sel,aes(x= yield_per_plot, y=location,fill=genotype)) +
+#   geom_boxplot()
+#
+# ggplot(data = Num22_sel,aes(x= root_num_plot, y=location,fill=genotype)) +
+#   geom_boxplot()
 
 Rank_Num = tibble() #
 for(i in farm_num){

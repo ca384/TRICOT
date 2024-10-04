@@ -16,12 +16,15 @@ all_packages_installed <- TRUE
 for (package in packages_used){
   if (!(package %in% ip[,"Package"])){
     print(paste("Please install package", package))
+    install.packages(package)
     all_packages_installed <- FALSE
   } else {
     library(package, character.only = T) # load required package
   } # end else statement
 }#END packages_used
-if (!all_packages_installed) stop("Need to install packages")
+if (!all_packages_installed) {
+  stop("Some packages were installed.")
+}
 
 ```
 
@@ -79,9 +82,6 @@ colnames(Rank22)[idc]
 ```
 
 ```{r }
-
-
- 
 trait_listX = list(c("Best_Ovi1", "Worst_Ovi1"),
 c("Best_Germ1","Worst_Germ1"),
 c("Best_Pgwt1","Worst_Pgwt1"),

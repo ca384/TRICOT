@@ -433,6 +433,7 @@ rrs$p.adj
 dim(rrs$r)
 library(corrplot)
 
+write.csv(x=BLUEmean_farm_wide,"/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/complete_onfarm_BLUE_mean_after_prophav.csv" ) # the BLUe means for onfarm numeric data
 
 write.csv(x=BLUEmean_farm_sel2,"/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/onfarm_BLUE_mean_after_prophav.csv" ) # the BLUe means for onfarm numeric data
 write.csv(x=BLUEmean_station_wide_sel2,"/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/onstation_BLUE_mean_after_prophav.csv" ) # the BLUP means for onfarm numeric data

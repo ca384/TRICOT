@@ -9,13 +9,15 @@ all_packages_installed <- TRUE
 for (package in packages_used){
   if (!(package %in% ip[,"Package"])){
     print(paste("Please install package", package))
+    install.packages(package)
     all_packages_installed <- FALSE
   } else {
     library(package, character.only = T) # load required package
   } # end else statement
 }#END packages_used
-if (!all_packages_installed) stop("Need to install packages")
-
+if (!all_packages_installed) {
+  stop("Some packages were installed.")
+}
 
 
 
@@ -27,7 +29,7 @@ head(Num_22)
 colnames(Num_22)
 Num22 = Num_22[,!colnames(Num_22) %in% c("comment")] # removed coment
 colnames(Num22)
-
+Num22$missing_plot<- 30 - Num22$noh
 
 Num22$location <- as.factor(Num22$location)
 Num22$farmers_number <- as.factor(Num22$farmers_number)
@@ -65,17 +67,18 @@ Num22$mean_ht= (Num22$plt.ht1 + Num22$plt.ht2 + Num22$plt.ht3)/3
 Num22$mean_brnch_ht= (Num22$brnch.ht1 + Num22$brnch.ht2 +Num22$brnch.ht3)/3
 
   # Calculate weight per plant
-  Num22$weight_per_plant <- Num22$total.rt.wt / Num22$noh
+  #Num22$weight_per_plant <- Num22$total.rt.wt / Num22$noh
+  #Num22$yield_ha<- (Num22$weight_per_plant*10000)/30
 
   # Calculate yield per plot
-  Num22$yield_per_plot <-  Num22$weight_per_plant * 30
-#Num22$total_yield_plot = (Num22$total.rt.wt*30)/Num22$noh #  30 is total number of stands in a 5*6 plot, noh is number of stands harvested
-Num22$mkt_yield_plot = (Num22$sellable.rt.wt /Num22$noh)*30
-Num22$efficient_yield = (Num22$mkt_yield_plot/Num22$yield_per_plot)* 100
-Num22$root_num_plot = (Num22$total.rt.no /Num22$noh)*30
-Num22$mkt_root_number_plot = (Num22$sell.rt.no/Num22$noh)*30
-Num22$efficient_rootNum = (Num22$mkt_root_number_plot/Num22$root_num_plot)*100
-Num22$shwt_plot = (Num22$sht.wt/Num22$noh)*30
+#   Num22$yield_per_plot <-  Num22$weight_per_plant * 30
+# #Num22$total_yield_plot = (Num22$total.rt.wt*30)/Num22$noh #  30 is total number of stands in a 5*6 plot, noh is number of stands harvested
+# Num22$mkt_yield_plot = (Num22$sellable.rt.wt /Num22$noh)*30
+# Num22$efficient_yield = (Num22$mkt_yield_plot/Num22$yield_per_plot)* 100
+# Num22$root_num_plot = (Num22$total.rt.no /Num22$noh)*30
+# Num22$mkt_root_number_plot = (Num22$sell.rt.no/Num22$noh)*30
+# Num22$efficient_rootNum = (Num22$mkt_root_number_plot/Num22$root_num_plot)*100
+# Num22$shwt_plot = (Num22$sht.wt/Num22$noh)*30
 
 ### snps data
 # tricot_snp= read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/Tricot_22/29_tricot_snps.tsv", sep = "\t")
@@ -100,19 +103,19 @@ dim(Num22a)
 colnames(Num22a)
 
 Num22a$rot = as.numeric(Num22a$rot)
-Traits <- colnames(Num22a)[-c(1:14, 16, 17, 21, 24, 27:28)] # remove these cells
+Traits <- colnames(Num22a)[-c(1:19)] # remove these cells
 library(tibble)
-id_o <- which(Num22a$efficient_yield == 0) # find values less than 0
+#id_o <- which(Num22a$efficient_yield == 0) # find values less than 0
 
 Num22b = Num22a
-Num22b[id_o, "efficient_yield"] = NA # change the 0s to NA
+#Num22b[id_o, "efficient_yield"] = NA # change the 0s to NA
 #id_wt <- which(Num22a$unsellable.rt.wt == 0)
 #Num22b[id_wt, "unsellable.rt.wt"] = NA
-Blupmean_1 = tibble()
-for(Trait in Traits){
+Bluemean_1 = tibble()
+for(Trait in Traits[c(1,4,7,8)]){
 eval(parse(text = paste(
-"outmod <- lmer(",Trait," ~ (1|genotype) +
-(1|farmers_number:location)+ (1|location), data = Num22b )" # better model
+"outmod <- lmer(formula=",Trait," ~ (1|genotype) +
+(1|farmers_number:location) + (1|location) + missing_plot, data = Num22b )" # better model
 )))
 idout <- which(abs(stats::rstudent(outmod)) >3) # remove outliers
 if(length(idout) == 0){
@@ -120,23 +123,72 @@ Numx <- Num22b}else{
   Numx <- Num22b[-idout,]
 }
 
-eval(parse(text = paste(
-"model1 <- lmer(",Trait," ~ (1|genotype) + (1|farmers_number:location) + (1|location), data = Numx )")))
-summary(model1)
-prd = coef(model1) # get the coefficient of the model
-prd1 = prd$genotype
-colnames(prd1)[1] = "BLUPsMean"
-prd1$Genotype = rownames(prd1)
-prd1 = prd1[,c(2,1)]
-rownames(prd1) = NULL
-prdT <- cbind(Trait = Trait, prd1)
-Blupmean_1 = rbind(Blupmean_1, prdT)
-}
+ eval(parse(text = paste(
+ "model1 <-mmer(fixed=",Trait," ~ genotype-1 +  missing_plot,
+random= ~  farmers_number:location + location ,
+ rcov = ~ units, data = Num22b )" # better model
+)))
 
+idm <- which(model1$Beta$Effect %in% "missing_plot")
+Blue1 <- model1$Beta[-idm,]
+colnames(Blue1)[3] = "BLUEMean"
+colnames(Blue1)[2] = "Genotype"
+Blue1$Genotype <- gsub(pattern = "genotype", replacement = "",
+                       x = Blue1$Genotype )
+Bluemean_1 = rbind(Bluemean_1, Blue1)
+}
+# (10000 * xkg)/30
+Bluemean_1$tonnes_ha <- (Bluemean_1$BLUEMean * 333.3)/1000
 #which(abs(stats::rstudent(model1)) >3)
 library(reshape2)
-Blupmean_1wide = dcast(data = Blupmean_1, formula = Genotype ~ Trait,
-      fun.aggregate = mean, value.var = "BLUPsMean", na.rm = T)
+Bluemean_1wide = dcast(data = Bluemean_1, formula = Genotype ~ Trait,
+      fun.aggregate = mean, value.var = "tonnes_ha", na.rm = T)
+
+# for height
+Bluemean_2 = tibble()
+for(Trait in Traits[c(17,18)]){
+  eval(parse(text = paste(
+    "outmod <- lmer(formula=",Trait," ~ (1|genotype) +
+(1|farmers_number:location) + (1|location) , data = Num22b )" # better model
+  )))
+  idout <- which(abs(stats::rstudent(outmod)) >3) # remove outliers
+  if(length(idout) == 0){
+    Numx <- Num22b}else{
+      Numx <- Num22b[-idout,]
+    }
+
+  eval(parse(text = paste(
+    "model2 <-mmer(fixed=",Trait," ~ genotype-1,
+random= ~  farmers_number:location + location ,
+rcov = ~ units, data = Num22b )" # better model
+  )))
+
+
+  Blue2 <- model2$Beta
+  colnames(Blue2)[3] = "BLUEMean"
+  colnames(Blue2)[2] = "Genotype"
+  Blue2$Genotype <- gsub(pattern = "genotype", replacement = "",
+                         x = Blue2$Genotype )
+  Bluemean_2 = rbind(Bluemean_2, Blue2)
+}
+
+Bluemean_2$cm <- (Bluemean_2$BLUEMean)
+
+library(reshape2)
+Bluemean_2wide = dcast(data = Bluemean_2, formula = Genotype ~ Trait,
+                       fun.aggregate = mean, value.var = "cm", na.rm = T)
+
+Blue2022<- cbind(Bluemean_1wide,Bluemean_2wide)
+
+yield_22_blue<- Blue2022[-6]
+
+write.csv(x=yield_22_blue, file = "/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/2022_blues_model_missing_data2.csv")
+
+
+
+
+
+
 
 Blupmean_1wide = Blupmean_1wide %>%
   dplyr::select("mean_brnch_ht", "mean_ht", "mkt_root_number_plot", "mkt_yield_plot", "root_num_plot","rot","rt.colour", "rt.shape","shwt_plot", "yield_per_plot" )
@@ -149,6 +201,7 @@ meanheatsc = scale(meanheat)
 
 
 pheatmap(meanheatsc, display_numbers = T, fontsize = 7) # A heatmap that displays values in the cell
+
 #heatmap(x = meanheatsc, cex.axis =10)
 str(Blupmean_1wide)
 

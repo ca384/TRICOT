@@ -1,4 +1,4 @@
-# packages
+`# packages
 packages_used <- c("workflowr","tidyverse", "ggplot2", "here","climatrends" ,"tidyverse", "PlackettLuce","gosset", "patchwork","qvcalc","ggparty","igraph", "ClimMobTools", "multcompView","ggplot2", "gtools","remotes","here", "ggpubr", "psych")
 
 #install.packages(c("agricolae"))
@@ -7,13 +7,15 @@ all_packages_installed <- TRUE
 for (package in packages_used){
   if (!(package %in% ip[,"Package"])){
     print(paste("Please install package", package))
+    install.packages(package)
     all_packages_installed <- FALSE
   } else {
     library(package, character.only = T) # load required package
   } # end else statement
 }#END packages_used
-if (!all_packages_installed) stop("Need to install packages")
-
+if (!all_packages_installed) {
+  stop("Some packages were installed.")
+}
 
 
 #using the 3 9MAP traits labels =  "Overall_impression",  "Canopy", "Branching")
@@ -616,6 +618,7 @@ trait_list_Agro = list(c("Best_Ovi1", "Worst_Ovi1"),
                             c("Best_Ovi3",  "Worst_Ovi3"),
                             c("Best_Ovi6", "Worst_Ovi6"),
                             c("Best_overimpr9MAP","Worst_overimpr9MAP"),
+                            c("Best_HvYield12", "Worst_HvYield12"),
                             c("Best_HvOvi12", "Worst_HvOvi12"),
                             c("Best_replant12" , "Worst_replant12"))
 
@@ -660,27 +663,31 @@ tricot_sumMean_Agro_All = do.call(cbind, tricot_rank_model_ALL_Agro1)
 dim(tricot_sumMean_Agro_All)
 tricot_sumMean_Agro_All<- as.data.frame(tricot_sumMean_Agro_All) # tricot worth at harvest
 
-Traitnames_Agro <- c("Overall Impression_1MAP", "Overall Impression_3MAP", "Overall Impression_6MAP","Overall Impression_9MAP", "Overall Impression_Harvest" ,"Replant")
+Traitnames_Agro <- c("Overall Impression_1MAP", "Overall Impression_3MAP", "Overall Impression_6MAP","Overall Impression_9MAP","Yield", "Overall Impression_Harvest" ,"Replant")
 
 colnames(tricot_sumMean_Agro_All) <- Traitnames_Agro
 
-onfarm_BLUES <- read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/onfarm_BLUE_mean_after_prophav.csv" ) # the BLUe means for onfarm numeric data
+tricot_sumMean_Agro_All1= tricot_sumMean_Agro_All%>%
+  dplyr::arrange((rownames(tricot_sumMean_Agro_All)))
+
+#onfarm_BLUES <- read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/onfarm_BLUE_mean_after_prophav.csv" ) # the BLUe means for onfarm numeric data
+onfarm_BLUES <-read.csv("/Users/ca384/Documents/ChinedoziRepo/TRICOT/output/complete_onfarm_BLUE_mean_after_prophav.csv" ) # the BLUe means for onfarm numeric data
 
 
 
-rownames(tricot_sumMean_Agro_All)[which(!rownames(tricot_sumMean_Agro_All) %in% onfarm_BLUES$X)]
+# rownames(tricot_sumMean_Agro_All)[which(!rownames(tricot_sumMean_Agro_All) %in% onfarm_BLUES$X)]
+#
+# idrw_All_agro <- which(rownames(tricot_sumMean_Agro_All) %in% onfarm_BLUES$X) #looking for missing genotypes
+# tricot_sumMean_Agro_All_Sel <- tricot_sumMean_Agro_All[idrw_All_agro,]
+# idrw_onfarm <- which(onfarm_BLUES$X %in% rownames(tricot_sumMean_Agro_All_Sel)) #looking for missing genotypes
+# length(idrw_onfarm)
+# onfarm_BLUES_sel <- onfarm_BLUES[idrw_onfarm,]
+# dim(onfarm_BLUES_sel)
 
-idrw_All_agro <- which(rownames(tricot_sumMean_Agro_All) %in% onfarm_BLUES$X) #looking for missing genotypes
-tricot_sumMean_Agro_All_Sel <- tricot_sumMean_Agro_All[idrw_All_agro,]
-idrw_onfarm <- which(onfarm_BLUES$X %in% rownames(tricot_sumMean_Agro_All_Sel)) #looking for missing genotypes
-length(idrw_onfarm)
-onfarm_BLUES_sel <- onfarm_BLUES[idrw_onfarm,]
-dim(onfarm_BLUES_sel)
 
+#onfarm_BLUES_Sel1<- onfarm_BLUES_sel
 
-onfarm_BLUES_Sel1<- onfarm_BLUES_sel
-
-onfarm_blues_overall_Agro_cor <- corTest(tricot_sumMean_Agro_All_Sel, onfarm_BLUES_Sel1[-1])
+onfarm_blues_overall_Agro_cor <- corTest(tricot_sumMean_Agro_All1, onfarm_BLUES[-c(1,2)])
 
 onfarm_blues_overall_Agro_cor$r = round(onfarm_blues_overall_Agro_cor$r, 2)
 onfarm_blues_overall_Agro_cor$r
@@ -1132,3 +1139,4 @@ corrplot::corrplot(corr = chem_tpa_ebaN_cor$r ,tl.cex = 0.6,p.mat = chem_tpa_eba
                    number.cex = 0.7,
                    number.digits = 3, is.corr = T,outline = T, mar = c(0.5,0.5,0.5,0.5))
 
+``
